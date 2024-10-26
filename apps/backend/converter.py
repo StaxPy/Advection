@@ -3,7 +3,8 @@ import re
 from PIL import Image
 from PIL import ImageDraw
 import numpy as np
-import Preview
+import shared.variables as sv
+
 
 # Define paths for the OBJ file and the output MCFunction file
 INPUT_PATH = 'SimpleRig/animation'  # Change this to your OBJ files directory
@@ -15,7 +16,11 @@ class ParticleData():
         self.position = position
         self.color = color
 
-        
+
+
+
+
+
 def read_mtl_file(mtl_file_path):
     """Reads an MTL file and extracts materials with their diffuse textures (map_Kd)."""
     materials = {}
@@ -400,6 +405,9 @@ def write_mc_function(sequence,frame,output_path,file_name,particle_data_list,pa
 
 def read_file(file_path):
     print("read file")
+
+
+
 
 if __name__ == "__main__":
     # main(INPUT_PATH, OUTPUT_PATH)
