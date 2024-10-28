@@ -11,8 +11,8 @@ import multiprocessing as mp
 
 
 def initialize_interface():
-    global TkApp, config_frame, pygame_frame
-    TkApp = tk.Tk()
+    global TkApp, config_frame, preview_frame
+    TkApp = customtkinter.CTk()
 
     TkApp.minsize(800, 600)  # Set minimum size to 800x600
     TkApp.geometry(f"{sv.WIDTH}x{sv.HEIGHT}")
@@ -20,17 +20,79 @@ def initialize_interface():
     TkApp.title("Advanced Particle Converter")
 
     config_frame = tk.Frame(TkApp,background="#181818")
-    config_frame.grid(row = 0, column = 0,sticky="nsew")
-    TkApp.grid_columnconfigure(0, weight=1)
-    TkApp.grid_rowconfigure(0, weight=1)
+    preview_frame = tk.Frame(TkApp, background="#181818")
+    export_frame = tk.Frame(TkApp, background="#dd0c0c")
+
+    # config_frame.pack(side=tk.LEFT,fill=tk.NONE,expand=False)
+    # TkApp.grid_columnconfigure(0, weight=1)
+    # TkApp.grid_columnconfigure(1, weight=1)
+    # TkApp.grid_rowconfigure(0, weight=1)
     # config_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-    pygame_frame = tk.Frame(TkApp)
-    pygame_frame.grid(row = 0, column = 1,sticky="nsew")
-    TkApp.grid_columnconfigure(1, weight=1,minsize=sv.WIDTH/2)
+    # pygame_frame = tk.Frame(TkApp, width=1200, height=500, background="#181818")
+    # pygame_frame.pack(fill=tk.NONE, expand=True, side=tk.RIGHT)
+
+    # canvas = tk.Canvas(TkApp, width=1200, height=600, bg="#ff0000")
+    # canvas.grid(row=0, column=1, sticky="nsew")
+
+    TkApp.columnconfigure((0,1), weight=1,uniform="a")
+    TkApp.rowconfigure((0), weight=3,uniform="a")
+    TkApp.rowconfigure((1), weight=1,uniform="a")
+
+    # # canvas.pack(side=tk.RIGHT,fill=tk.NONE,expand=False)
+
+    # pygame_frame = tk.Frame(canvas, background="#ff0000")
+    # pygame_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+
+    
+    config_frame.grid(row = 0, column = 0,sticky="nsew",rowspan=2)
+    preview_frame.grid(row=0, column=1, sticky="nsew")
+    export_frame.grid(row = 1, column = 1,sticky="nsew")
+
+    # preview_frame.bind("<Button-2>", pan_cursor)
+    # preview_frame.bind("<ButtonRelease-2>", reset_cursor)
+    # preview_frame.bind("<Button-3>", rotate_cursor)
+    # preview_frame.bind("<ButtonRelease-3>", reset_cursor)
+
+
+    
+
+
+
+    
+
+    # pygame_frame.grid(row = 0, column = 1,sticky="nsew")
+    # pygame_frame.config(width=800, height=300)  # Adjust these values as needed
+    # pygame_frame.grid_propagate(False)
+    # TkApp.bind('<Configure>', on_resize)
+    # TkApp.grid_columnconfigure(1, weight=1,minsize=sv.WIDTH/2)
+
+def on_pan():
+    print("Pan")
+
+def pan_cursor(event):
+    preview_frame.config(cursor="fleur")
+
+def rotate_cursor(event):
+    preview_frame.config(cursor="exchange")
+
+def reset_cursor(event):
+    preview_frame.config(cursor="arrow")
+
+
+
+
+
+def on_resize(event):
+    print("Resizing")
+    sv.pygame_width, sv.pygame_height = preview.display.get_size()
+    TkApp.columnconfigure(1, minsize=TkApp.winfo_width()/2)
+
+
     # pygame_frame.pack(side = tk.RIGHT,fill=tk.BOTH, expand=True,minsize=(0,0))
 
 def run_main_loop():
-    tk.mainloop()
+    # tk.mainloop()
+    TkApp.mainloop()
 
 def create_interface():
     global input_frame, output_frame, input_path_label, output_path_label, choose_file_button, sequence_checkbox, sequence_start_Entry, sequence_end_Entry, preview_framenumber_slider, preview_framenumber_label
@@ -51,30 +113,30 @@ def create_interface():
     input_frame.grid_rowconfigure(0, weight=1)
     input_frame.grid_rowconfigure(1, weight=1)
     input_frame_label = customtkinter.CTkLabel(input_frame, text = 'INPUT',text_color='white',font=InterFont)
-    input_frame_label.grid(column=2, row=0, padx=50, pady=10,sticky="wens")
+    input_frame_label.grid(column=2, row=0, padx=0, pady=0,sticky="wens")
     input_path_label = customtkinter.CTkLabel(input_frame, text = '/',text_color='white',font=InterFont)
-    input_path_label.grid(column=0, row=1, padx=50, pady=10)
+    input_path_label.grid(column=0, row=1, padx=0, pady=0)
     choose_file_button = customtkinter.CTkButton(input_frame, text = 'Choose 3D .obj file',  command = find_input_dialog,width=200,fg_color='#7a7a7a',hover_color=hover_color,text_color='white',font=InterFont)
-    choose_file_button.grid(column=1, row=1, padx=50, pady=10)
+    choose_file_button.grid(column=1, row=1, padx=0, pady=0)
 
     sv.sequence_boolean = tk.IntVar(value=0)
     sequence_checkbox = customtkinter.CTkCheckBox(input_frame,state="disabled",variable=sv.sequence_boolean,command=update_sequence_section, text="Sequence", onvalue=True, offvalue=False,checkbox_width=20,checkbox_height=20,text_color='white',border_color='#ffffff',border_width=1)
-    sequence_checkbox.grid(column=1, row=2, padx=50, pady=10)
+    sequence_checkbox.grid(column=1, row=2, padx=0, pady=0)
     sequence_start_Entry = customtkinter.CTkEntry(input_frame, **disabled_entry_style,textvariable=customtkinter.StringVar(value="start"))
-    sequence_start_Entry.grid(column=2, row=2, padx=50, pady=10)
+    sequence_start_Entry.grid(column=2, row=2, padx=0, pady=0)
     sequence_end_Entry = customtkinter.CTkEntry(input_frame,**disabled_entry_style,textvariable=customtkinter.StringVar(value="end"))
-    sequence_end_Entry.grid(column=3, row=2, padx=50, pady=10)
+    sequence_end_Entry.grid(column=3, row=2, padx=0, pady=0)
 
 
 
 
 
     output_frame = customtkinter.CTkFrame(config_frame, width=200, height=200, corner_radius=10, fg_color='#313131')
-    output_frame.pack(side=tk.TOP, expand=True,fill='x',padx=50)
+    output_frame.pack(side=tk.TOP, expand=True,fill='x',padx=0)
     output_path_label = customtkinter.CTkLabel(output_frame, text = '/',text_color='white')
-    output_path_label.grid(column=0, row=1, padx=50, pady=10)
+    output_path_label.grid(column=0, row=1, padx=0, pady=0)
     choose_file_button = customtkinter.CTkButton(output_frame, text = 'Choose output folder',  command = find_output_dialog,fg_color='#7a7a7a',hover_color=hover_color,text_color='white')
-    choose_file_button.grid(column=1, row=1, padx=50, pady=10)
+    choose_file_button.grid(column=1, row=1, padx=0, pady=0)
 
     launch_frame = customtkinter.CTkFrame(config_frame, width=200, height=200, corner_radius=10, fg_color="transparent")
     launch_frame.pack(side=tk.TOP, expand=True)
@@ -84,24 +146,24 @@ def create_interface():
     disabled_slider_style = {"state":"disabled","bg_color":'black',"fg_color":'#525252','progress_color': '#525252',"border_color":'black',"button_color":'#3a3a3a',"button_hover_color":'#3a3a3a'}
     normal_slider_style = {"state":"normal","bg_color":'black',"fg_color":'#525252','progress_color': '#525252',"border_color":'black',"button_color":hover_color,"button_hover_color":hover_color}
 
-    preview_framenumber_label = customtkinter.CTkLabel(pygame_frame, text = 'frame',text_color='#525252',bg_color='black',width=100)
-    preview_framenumber_label.pack(side=tk.BOTTOM, expand=False, padx=50, pady=10,)
+    preview_framenumber_label = customtkinter.CTkLabel(preview_frame, text = 'frame',text_color='#525252',bg_color='black',width=100)
+    preview_framenumber_label.pack(side=tk.BOTTOM, expand=False, padx=0, pady=0,)
 
     preview_framenumber = customtkinter.IntVar(value=0)
-    preview_framenumber_slider = customtkinter.CTkSlider(pygame_frame,from_=0, to=100,number_of_steps=10,variable=preview_framenumber,**disabled_slider_style,command=slider_debouncer.debounced_refresh)
-    preview_framenumber_slider.pack(side=tk.BOTTOM, expand=False, padx=50, pady=0)
+    preview_framenumber_slider = customtkinter.CTkSlider(preview_frame,from_=0, to=100,number_of_steps=10,variable=preview_framenumber,**disabled_slider_style,command=slider_debouncer.debounced_refresh)
+    preview_framenumber_slider.pack(side=tk.BOTTOM, expand=False, padx=0, pady=0)
 
 
 
-    randomize_button = customtkinter.CTkButton(pygame_frame, text = 'randomize',  command = random_cube_refresh_preview,bg_color='black',fg_color='#7a7a7a',hover_color=hover_color,text_color='white')
-    randomize_button.pack(side=tk.TOP, expand=False, padx=50, pady=10)
+    randomize_button = customtkinter.CTkButton(preview_frame, text = 'randomize',  command = random_cube_refresh_preview,bg_color='black',fg_color='#7a7a7a',hover_color=hover_color,text_color='white')
+    randomize_button.pack(side=tk.TOP, expand=False, padx=0, pady=0)
 
     # preview_button = customtkinter.CTkButton(pygame_frame, text = 'preview',  command = refresh_preview,bg_color='black',fg_color='#7a7a7a',hover_color=hover_color,text_color='white')
     # preview_button.pack(side=tk.TOP, expand=False, padx=50, pady=10)
 
     sv.preview_boolean = tk.IntVar(value=sv.preview_boolean)
-    preview_toggle_checkbox = customtkinter.CTkCheckBox(pygame_frame,text="Preview",text_color='white',command=None, variable=sv.preview_boolean,onvalue=True, offvalue=False,checkbox_width=20,checkbox_height=20,fg_color='#7a7a7a',hover_color=hover_color,bg_color='black',border_color='#ffffff',border_width=1)
-    preview_toggle_checkbox.pack(side=tk.RIGHT, expand=False, padx=50, pady=10)
+    preview_toggle_checkbox = customtkinter.CTkCheckBox(preview_frame,text="Preview",text_color='white',command=None, variable=sv.preview_boolean,onvalue=True, offvalue=False,checkbox_width=20,checkbox_height=20,fg_color='#7a7a7a',hover_color=hover_color,bg_color='black',border_color='#ffffff',border_width=1)
+    preview_toggle_checkbox.pack(side=tk.RIGHT, expand=False, padx=0, pady=0)
 
 
     # progressbar = customtkinter.CTkProgressBar(button_win,  width=200, orientation="horizontal",mode="indeterminate",indeterminate_speed=1)

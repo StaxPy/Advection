@@ -5,14 +5,17 @@ import time
 import shared.variables as sv
 
 
-def initialize(WIDTH, HEIGHT, pygame_frame):
+def initialize(WIDTH, HEIGHT, frame):
     global display
     global camera_angle_x, camera_angle_y,camera_distance, last_mouse_pos, pan_offset_x, pan_offset_y, panning_active, pan_last_mouse_pos
     global particle_texture
-    os.environ['SDL_WINDOWID'] = str(pygame_frame.winfo_id())
+    os.environ['SDL_WINDOWID'] = str(frame.winfo_id())
     os.environ['SDL_VIDEODRIVER'] = 'windib'
     pygame.display.init()
-    display = pygame.display.set_mode((WIDTH/2, HEIGHT))
+    # display = pygame.display.set_mode((WIDTH/2, HEIGHT))
+    display = pygame.display.set_mode((800,500), pygame.RESIZABLE)
+
+    
     
     pygame.font.init()
 
@@ -52,52 +55,7 @@ class TexturedParticle(pygame.sprite.Sprite):
         
         self.rect = self.surface.get_rect()
 
-def loading_animation_mp():
-    # Define square properties
-    square_size = 50
-    squares = []
-    # Create positions for the squares in a 2x2 grid
-    for row in range(2):
-        for col in range(2):
-            x = sv.pygame_width // 2 - square_size + col * square_size
-            y = sv.pygame_height // 2 - square_size + row * square_size
-            squares.append((x, y))
 
-    rotation_angle = 0  # Initial rotation angle
-    while not sv.loading_done:
-        display.fill((0, 0, 0))
-
-        # Rotate the squares
-        for i, (x, y) in enumerate(squares):
-            # Rotate square and draw it
-            rotated_square = pygame.Surface((square_size, square_size))
-            rotated_square.fill((255, 255, 255))  # Fill square with white color
-            rotated_square = pygame.transform.rotate(rotated_square, rotation_angle)
-            rect = rotated_square.get_rect(center=(x + square_size // 2, y + square_size // 2))
-            display.blit(rotated_square, rect.topleft)
-
-        pygame.display.flip()
-        # pygame.display.update()
-
-        # Update rotation angle (90 degrees every 0.5 seconds)
-        rotation_angle = (rotation_angle + 90 * 0.1) % 360  # 90 degrees * (1/10) seconds = 9 degrees per frame
-        time.sleep(0.05)  # Control the speed of the animation
-
-
-def animation(current_square, squares, square_size):
-    # Define square properties
-
-
-    display.fill((0, 0, 0))
-
-    # Draw the current square
-    pygame.draw.rect(display, (255, 255, 255), (squares[current_square][0], squares[current_square][1], square_size, square_size))
-
-    # Update the current square index (clockwise rotation)
-    current_square = (current_square + 1) % 4
-
-    pygame.display.flip()
-    time.sleep(0.5)  # Control the speed of the animation
 
 
 def loading_animation():
@@ -132,11 +90,17 @@ def loading_animation():
         time.sleep(0.05)  # Control the speed of the animation
 
 # Function to draw each particle (called once every frame)
-def draw_particles(screen, window_width, window_height, camera_angle_x, camera_angle_y, camera_distance, pan_offset_x, pan_offset_y, particle_size, particles):
+def draw_particles(screen, window_width, window_height, camera_angle_x, camera_angle_y, camera_distance, pan_offset_x, pan_offset_y, particle_size, particles,x_align,y_align,z_align):
     """
     Draws particles and axis lines on the screen, projecting 3D positions to 2D.
     """
     projected_objects = []
+
+    x_offset, y_offset, z_offset = 1, 0, 0 # Initialize alignements
+
+    
+
+
 
     for i, particle in enumerate(particles):
         position = particle.position
@@ -144,9 +108,12 @@ def draw_particles(screen, window_width, window_height, camera_angle_x, camera_a
         
 
 
-        # Rotate particle position based on camera angles
+        
+        """ Rotate particle position based on camera angles """
+        # Rotate around the Y-axis (horizontal rotation):
         x = position[0] * np.cos(camera_angle_y) - position[2] * np.sin(camera_angle_y)
         z = position[0] * np.sin(camera_angle_y) + position[2] * np.cos(camera_angle_y)
+        # Rotate around the X-axis (vertical rotation):
         y = position[1] * np.cos(camera_angle_x) - z * np.sin(camera_angle_x)
         z = position[1] * np.sin(camera_angle_x) + z * np.cos(camera_angle_x)
 
@@ -218,6 +185,8 @@ def pygame_loop():
     global last_mouse_pos, camera_angle_x, camera_angle_y, camera_distance  # Make last_mouse_pos accessible to this function
     global pan_offset_x, pan_offset_y, panning_active, pan_last_mouse_pos  # Access pan variables
 
+    sv.pygame_width, sv.pygame_height = display.get_size() 
+
     # print(pan_offset_x, pan_offset_y,camera_angle_x, camera_angle_y, camera_distance)
     for event in pygame.event.get():
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -226,6 +195,7 @@ def pygame_loop():
             elif event.button == 2:  # Middle mouse button for pan
                 panning_active = True
                 pan_last_mouse_pos = event.pos
+                # pygame.mouse.set_system_cursor(pygame.SYSTEM_CURSOR_HAND)
 
         if event.type == pygame.MOUSEMOTION:
             if last_mouse_pos:  # Rotate camera with left mouse
@@ -260,7 +230,6 @@ def pygame_loop():
         #     # screen = pygame.display.set_mode((event.w, event.h))
         #     interface.TkApp.columnconfigure(1, minsize=interface.TkApp.winfo_width()/2)
 
-    # interface.Warning_OutputFolderRequired() Pourquoi ici??
 
     
     display.fill((0,0,0))
@@ -269,7 +238,7 @@ def pygame_loop():
 
     #pygame.draw.circle(screen, circle_color, (250, 250), 125)
     if sv.textured_particles and sv.preview_boolean.get() == 1:
-        draw_particles(display,sv.pygame_width, sv.pygame_height,camera_angle_x,camera_angle_y,camera_distance,pan_offset_x,pan_offset_y,sv.PARTICLE_SIZE,sv.textured_particles)
+        draw_particles(display,sv.pygame_width, sv.pygame_height,camera_angle_x,camera_angle_y,camera_distance,pan_offset_x,pan_offset_y,sv.PARTICLE_SIZE,sv.textured_particles,"Center","Center","Center")
 
     
 
