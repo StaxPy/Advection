@@ -9,6 +9,12 @@ PARTICLE_TEXTURE_PATH = "assets/texture.png"
 
 # LOGIC RELATED VARIABLES
 sequence_boolean = 0
+model_resize_boolean = 0
+image_resize_boolean = 0
+particle_type = "dust"
+particle_mode = "Force"
+particle_color_boolean = 0
+autosize_boolean = 1
 sequence_files = {}
 data_particles = []
 textured_particles = []
