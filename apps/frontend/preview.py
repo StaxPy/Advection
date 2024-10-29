@@ -70,7 +70,9 @@ class TexturedParticle(pygame.sprite.Sprite):
         
         self.rect = self.surface.get_rect()
 
-
+def hex_to_rgb(hex_color):
+        hex_color = hex_color.lstrip('#')
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
 
 def loading_animation():
@@ -158,7 +160,11 @@ def pygame_loop():
 
     # print(pan_offset_x,pan_offset_y)
     
-    display.fill((0,0,0))
+
+
+
+
+    display.fill(hex_to_rgb(sv.almost_black))
 
 
 

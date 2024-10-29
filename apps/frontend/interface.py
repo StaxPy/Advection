@@ -26,6 +26,7 @@ def initialize_interface():
     medium_gray = "#6e6e6e"
     light_gray = "#adadad"
     white = "#ffffff"
+    almost_black = sv.almost_black
     black = "#000000"
 
 
@@ -35,10 +36,10 @@ def initialize_interface():
     TkApp.configure(background=black)
     TkApp.title("Animation-to-Particles Converter")
 
-    config_frame_border = tk.Frame(TkApp,background=black)
-    config_frame = tk.Frame(config_frame_border,background=black)
+    config_frame_border = tk.Frame(TkApp,background=almost_black)
+    config_frame = tk.Frame(config_frame_border,background=almost_black)
     preview_frame = tk.Frame(TkApp, background=dark_gray)
-    export_frame_border = tk.Frame(TkApp, background=black)
+    export_frame_border = tk.Frame(TkApp, background=almost_black)
     export_frame = customtkinter.CTkFrame(export_frame_border, fg_color=dark_gray,border_color=dark_gray,border_width=2)
 
     # config_frame.pack(side=tk.LEFT,fill=tk.NONE,expand=False)
@@ -53,7 +54,7 @@ def initialize_interface():
     # canvas.grid(row=0, column=1, sticky="nsew")
 
     TkApp.columnconfigure((0,1), weight=1,uniform="a")
-    TkApp.rowconfigure((0), weight=3,uniform="a")
+    TkApp.rowconfigure((0), weight=4,uniform="a")
     TkApp.rowconfigure((1), weight=1,uniform="a")
     config_frame_border.rowconfigure((0), weight=1,uniform="a")
     config_frame_border.columnconfigure((0), weight=1,uniform="a")
@@ -70,7 +71,7 @@ def initialize_interface():
     config_frame.grid(row = 0, column = 0,sticky="nsew",pady=10,padx=10)
     preview_frame.grid(row=0, column=1, sticky="nsew")
     export_frame_border.grid(row = 1, column = 1,sticky="nsew")
-    export_frame.grid(row = 0, column = 0,sticky="nsew",pady=10,padx=10)
+    export_frame.grid(row = 0, column = 0,sticky="nsew",pady=15,padx=10)
 
     # preview_frame.bind("<Button-2>", pan_cursor)
     # preview_frame.bind("<ButtonRelease-2>", reset_cursor)

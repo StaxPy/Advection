@@ -32,4 +32,5 @@ global_size = (0,0,0)
 pygame_width, pygame_height = WIDTH/2, HEIGHT
 preview_boolean = 1
 loading_done = False
+almost_black = "#181818"
 
