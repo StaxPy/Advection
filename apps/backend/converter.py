@@ -57,18 +57,18 @@ def read_obj_file(obj_file_path):
     mtl_file_path = None
     current_material = None
 
-    with open(obj_file_path, 'r') as obj_file:
-        for line in obj_file:
+    with open(obj_file_path, 'r') as obj_file: # open the obj file
+        for line in obj_file: # For each line
             if line.startswith('v '):
                 # Split the line into parts
                 parts = line.strip().split()
                 x, y, z = map(float, parts[1:4])
-                vertices.append((x, y, z))
+                vertices.append((x, y, z))  # Store the vertex
             elif line.startswith('vt '):
                 # Read texture coordinates
                 parts = line.strip().split()
                 u, v = map(float, parts[1:3])
-                texture_coords.append((u, v))
+                texture_coords.append((u, v)) # Store the texture coordinate
             elif line.startswith('f '):
                 # Read faces (indices are 1-based in OBJ)
                 parts = line.strip().split()[1:]  # Skip the 'f' part

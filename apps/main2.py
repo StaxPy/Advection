@@ -10,9 +10,10 @@ def loop():
 
 
     PreviewApp.loop()
-
+    
     interface.TkApp.update_idletasks()
-    interface.TkApp.after(10, loop)
+    interface.TkApp.after(30, loop)
+    
 
 
 

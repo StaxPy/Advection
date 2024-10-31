@@ -32,7 +32,13 @@ class Object3D:
         if self.movement_flag:
             self.rotate_y(pg.time.get_ticks() % 0.005) # Example rotation
 
+    def global_rotation(self):
+        self.rotate_y(self.render.camera.global_yaw/10)
+        self.rotate_x(-self.render.camera.global_pitch/10)
+
+
     def screen_projection(self):
+        # vertices = self.vertices @ rotate_y((self.render.camera.global_yaw/180))
         vertices = self.vertices @ self.render.camera.camera_matrix() # Apply camera matrix
         vertices = vertices @ self.render.projection.projection_matrix # Project on -1, 1 plane
         vertices = vertices[vertices[:, 2] > 0] # Filter out vertices behind the near plane (negative z-values after projection)
