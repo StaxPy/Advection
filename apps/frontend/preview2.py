@@ -11,6 +11,7 @@ class PygameRender:
         
         self.RES = self.WIDTH, self.HEIGHT = WIDTH, HEIGHT
         self.H_WIDTH, self.H_HEIGHT = self.WIDTH // 2, self.HEIGHT // 2
+        print(self.H_WIDTH, self.H_HEIGHT)
         self.FPS = 60
 
         os.environ['SDL_WINDOWID'] = str(frame.winfo_id())
@@ -49,8 +50,11 @@ class PygameRender:
         self.world_axes.scale(2.5)
         # self.world_axes.translate([0.7,0.9,0.7])
 
-        self.model = self.get_object_from_file('Testing_files/character_1.obj')
-        self.model.translate([1,1,1])
+        self.grid = Grid(self, 10, 1.0)
+
+        # self.model = self.get_object_from_file('Testing_files/character_1.obj')
+        self.model = self.get_object_from_file('Testing_files/cube.obj')
+        # self.model.translate([1,1,1])
 
     def get_object_from_file(self, filename):
             vertex, faces = [], []
@@ -72,6 +76,7 @@ class PygameRender:
         
         self.model.draw()
         self.world_axes.draw()
+        self.grid.draw()
         # self.axes.example_rotation()
         # self.axes.translate([0.002, 0.002, 0.002])
         # self.axes.draw()
@@ -97,7 +102,9 @@ class PygameRender:
         [print("button !",i.type) for i in pg.event.get(pump=False) if i.type == pg.MOUSEBUTTONDOWN]
         if self.limit > 100:
             return """
-        
+        self.clock.tick()
+        self.FPS = self.clock.get_fps()
+
         # Get the events (POSITION IS IMPORTANT, can conflict with tkinter otherwise)
         self.pg_events = pg.event.get() 
 
@@ -175,8 +182,8 @@ class PygameRender:
                     self.camera.global_yaw = dx
                     self.camera.global_pitch = dy
                     # NOT INTENTED EFFECT ?
-                    # self.camera.input_rotation(dx, dy)
-                    self.camera.rotate_around_center(dx,dy)
+                    self.camera.input_rotation(dx, dy)
+                    # self.camera.rotate_around_center(dx,dy)
                     # self.camera.input_orbit(dx, dy)
 
 
