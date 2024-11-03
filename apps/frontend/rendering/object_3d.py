@@ -11,6 +11,10 @@ def any_func(arr, a, b):
 def inside_screen(vertex):
     return np.all((vertex[:3] > -1.5) & (vertex[:3] < 1.5))
 
+class TexturedParticlesCloud:
+    def __init__(self, render, TexturedParticles):
+        pass
+
 class Object3D:
     def __init__(self,render, vertices='', faces=''):
         self.render = render
@@ -42,6 +46,7 @@ class Object3D:
 
     def screen_projection(self):
         # print(self.vertices)
+        
         vertices = self.vertices @ self.render.camera.camera_matrix() # Apply camera matrix
         vertices = vertices @ self.render.projection.projection_matrix # Project on -1, 1 plane
         # vertices = vertices[vertices[:, 2] > 0] # Filter out vertices behind the near plane (negative z-values after projection)
@@ -84,7 +89,6 @@ class Object3D:
         if self.draw_vertices:
             for index, vertex in enumerate(vertices):
                 if vertices_visibility[index]:
-                # if not any_func(vertex, self.render.H_WIDTH, self.render.H_HEIGHT):
                     pg.draw.circle(self.render.screen, pg.Color('white'), vertex, 2)
 
     def translate(self, pos):
@@ -125,7 +129,7 @@ class Axes(Object3D):
         self.draw_vertices = False
         self.label = 'XYZ'
 
-class Grid:
+class Grid(Object3D):
     def __init__(self, render, num_cells, cell_size):
         self.render = render
         self.num_cells = num_cells
@@ -143,6 +147,7 @@ class Grid:
             self.vertices.append((self.grid_size-self.offset, 0, i * self.cell_size-self.offset, 1))
 
         self.vertices = np.array(self.vertices)
+        self.translate([0.001, 0.001, 0.001]) # To avoid division by zero
 
         # self.start_vertices_x = np.array([(i * self.cell_size, 0, 0, 1) for i in range(0, self.num_cells+1, 1)])
         # self.start_vertices_z = np.array([(0, i * self.cell_size, 0,1) for i in range(0, self.num_cells+1, 1)])
@@ -157,7 +162,7 @@ class Grid:
         # print(self.start_vertices_z, self.end_vertices_z, self.start_vertices_x, self.end_vertices_x)
 
 
-
+        
         vertices = self.vertices @ self.render.camera.camera_matrix() # Apply camera matrix
         vertices = vertices @ self.render.projection.projection_matrix # Project on -1, 1 plane
         vertices /= vertices[:, -1].reshape(-1, 1) # Normalize

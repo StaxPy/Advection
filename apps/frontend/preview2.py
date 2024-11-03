@@ -1,6 +1,8 @@
 from frontend.rendering.object_3d import *
 from frontend.rendering.camera import *
 from frontend.rendering.projection import *
+import frontend.rendering.texture_data as td
+import frontend.rendering.particle as particle
 import shared.variables as sv
 import pygame as pg
 import os
@@ -11,7 +13,6 @@ class PygameRender:
         
         self.RES = self.WIDTH, self.HEIGHT = WIDTH, HEIGHT
         self.H_WIDTH, self.H_HEIGHT = self.WIDTH // 2, self.HEIGHT // 2
-        print(self.H_WIDTH, self.H_HEIGHT)
         self.FPS = 60
 
         os.environ['SDL_WINDOWID'] = str(frame.winfo_id())
@@ -34,6 +35,23 @@ class PygameRender:
         self.last_mouse_pos = None
         self.panning_active = False
         self.pan_last_mouse_pos = None
+
+        ''' TESTS'''
+        self.solo_textures, self.atlas_textures = td.load_textures()
+        # self.particle_texture = self.solo_textures['dust']
+        # self.particle_texture_atlas = self.atlas_textures['dust']
+        self.base_particle_size = (20,20)
+
+        self.frame_0 = td.get_atlas_frame(td.atlas_textures['dust'], 2, 8,8, 10).convert_alpha()
+
+        print(self.frame_0)
+        # self.surface = particle.TexturedParticle(self.particle_texture, self.base_particle_size, (255,0,0))
+
+
+        # self.surface = pg.Surface((50,50)).convert_alpha()
+        # self.surface.fill(pg.Color('red'))
+        # self.surface.blit(self.image, (0, 0), special_flags=pg.BLEND_RGBA_MULT)
+        ''''''
 
 
     def create_object(self):
@@ -73,7 +91,7 @@ class PygameRender:
 
         # self.model.rotate_y(pg.time.get_ticks() % 0.05)
         # self.model.translate([0.002, 0.002, 0.002])
-        
+
         self.model.draw()
         self.world_axes.draw()
         self.grid.draw()
@@ -110,6 +128,9 @@ class PygameRender:
 
         self.inputs_and_events()
         
+
+
+
         [exit() for i in self.pg_events if i.type == pg.QUIT]
         # pg.event.pump() not necessary after using .get() once
 
@@ -155,10 +176,15 @@ class PygameRender:
         
 
         self.draw()
+        
+        ''' TESTS '''
+        # self.screen.blit(self.surface, (10,10))
+        self.screen.blit(self.frame_0, (100,100), special_flags=pg.BLEND_PREMULTIPLIED)
+        ''''''
 
         # pg.display.set_caption(str(self.clock.get_fps()))
         pg.display.flip()
-        
+
         # self.clock.tick(self.FPS)
 
     def inputs_and_events(self):
