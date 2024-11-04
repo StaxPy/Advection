@@ -1,6 +1,8 @@
 from frontend.rendering.object_3d import *
 from frontend.rendering.camera import *
 from frontend.rendering.projection import *
+import frontend.rendering.texture_data as td
+import frontend.rendering.particle as particle
 import shared.variables as sv
 import pygame as pg
 import os
@@ -34,6 +36,23 @@ class PygameRender:
         self.panning_active = False
         self.pan_last_mouse_pos = None
 
+        ''' TESTS'''
+        self.solo_textures, self.atlas_textures = td.load_textures()
+        # self.particle_texture = self.solo_textures['dust']
+        # self.particle_texture_atlas = self.atlas_textures['dust']
+        self.base_particle_size = (20,20)
+
+        self.frame_0 = td.get_atlas_frame(td.atlas_textures['dust'], 2, 8,8, 10).convert_alpha()
+
+        print(self.frame_0)
+        # self.surface = particle.TexturedParticle(self.particle_texture, self.base_particle_size, (255,0,0))
+
+
+        # self.surface = pg.Surface((50,50)).convert_alpha()
+        # self.surface.fill(pg.Color('red'))
+        # self.surface.blit(self.image, (0, 0), special_flags=pg.BLEND_RGBA_MULT)
+        ''''''
+
 
     def create_object(self):
         self.camera = Camera(self, [1, 1, -5]) # Initialize the camera
@@ -49,8 +68,11 @@ class PygameRender:
         self.world_axes.scale(2.5)
         # self.world_axes.translate([0.7,0.9,0.7])
 
-        self.model = self.get_object_from_file('Testing_files/character_1.obj')
-        self.model.translate([1,1,1])
+        self.grid = Grid(self, 10, 1.0)
+
+        # self.model = self.get_object_from_file('Testing_files/character_1.obj')
+        self.model = self.get_object_from_file('Testing_files/cube.obj')
+        # self.model.translate([1,1,1])
 
     def get_object_from_file(self, filename):
             vertex, faces = [], []
@@ -69,9 +91,10 @@ class PygameRender:
 
         # self.model.rotate_y(pg.time.get_ticks() % 0.05)
         # self.model.translate([0.002, 0.002, 0.002])
-        
+
         self.model.draw()
         self.world_axes.draw()
+        self.grid.draw()
         # self.axes.example_rotation()
         # self.axes.translate([0.002, 0.002, 0.002])
         # self.axes.draw()
@@ -97,12 +120,17 @@ class PygameRender:
         [print("button !",i.type) for i in pg.event.get(pump=False) if i.type == pg.MOUSEBUTTONDOWN]
         if self.limit > 100:
             return """
-        
+        self.clock.tick()
+        self.FPS = self.clock.get_fps()
+
         # Get the events (POSITION IS IMPORTANT, can conflict with tkinter otherwise)
         self.pg_events = pg.event.get() 
 
         self.inputs_and_events()
         
+
+
+
         [exit() for i in self.pg_events if i.type == pg.QUIT]
         # pg.event.pump() not necessary after using .get() once
 
@@ -148,10 +176,15 @@ class PygameRender:
         
 
         self.draw()
+        
+        ''' TESTS '''
+        # self.screen.blit(self.surface, (10,10))
+        self.screen.blit(self.frame_0, (100,100), special_flags=pg.BLEND_PREMULTIPLIED)
+        ''''''
 
         # pg.display.set_caption(str(self.clock.get_fps()))
         pg.display.flip()
-        
+
         # self.clock.tick(self.FPS)
 
     def inputs_and_events(self):
@@ -175,8 +208,8 @@ class PygameRender:
                     self.camera.global_yaw = dx
                     self.camera.global_pitch = dy
                     # NOT INTENTED EFFECT ?
-                    # self.camera.input_rotation(dx, dy)
-                    self.camera.rotate_around_center(dx,dy)
+                    self.camera.input_rotation(dx, dy)
+                    # self.camera.rotate_around_center(dx,dy)
                     # self.camera.input_orbit(dx, dy)
 
 

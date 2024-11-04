@@ -11,8 +11,8 @@ class Camera:
         self.h_fov = math.pi / 3
         self.v_fov = self.h_fov * (render.HEIGHT / render.WIDTH)
         self.near_plane = 0.1
-        self.far_plane = 100
-        self.moving_speed = 0.005
+        self.far_plane = 50
+        self.moving_speed = 0.002
         self.zoom_speed = 0.05
         self.rotation_speed = 0.005
 
@@ -60,49 +60,20 @@ class Camera:
         """
     
     def input_movement(self, lateral_motion, vertical_motion):
+        rotate = rotate_y(-self.angleYaw) @ rotate_x(-self.anglePitch)  # Align this vector with the camera orientation
         distance_factor = max(np.linalg.norm(self.position[:3])-2 /3 ,0.5) # Decelerate zoom approaching origin
-        self.position -= self.right * lateral_motion * self.moving_speed * distance_factor
-        self.position += self.up * vertical_motion * self.moving_speed * distance_factor
+        self.position -= self.right @ rotate * lateral_motion * self.moving_speed * distance_factor
+        self.position += self.up @ rotate * vertical_motion * self.moving_speed * distance_factor
   
     def input_zoom(self, zoom):  
+        rotate =  rotate_y(-self.angleYaw) @ rotate_x(-self.anglePitch) # Align this vector with the camera orientation
         distance_factor = max(np.linalg.norm(self.position[:3])-1 ,0.5) # Decelerate zoom approaching origin
-        self.position += self.forward * zoom * self.zoom_speed * distance_factor
+        self.position += self.forward @ rotate * zoom * self.zoom_speed * distance_factor
     
     def input_rotation(self, yaw, pitch):
         self.camera_yaw(yaw * self.rotation_speed)
         self.camera_pitch(pitch * self.rotation_speed)
 
-
-    def input_orbit(self, yaw, pitch):
-
-        # NOT WORKING
-
-        self.position = [
-            self.orbit_center[0] + self.orbit_radius * math.cos(self.orbit_angle),
-            self.orbit_center[1],
-            self.orbit_center[2] + self.orbit_radius * math.sin(self.orbit_angle),
-            1.0
-            ]
-
-        self.camera_yaw(yaw * self.rotation_speed)
-        self.camera_pitch(pitch * self.rotation_speed)
-
-    
-    def rotate_around_center(self, yaw, pitch):
-        center = np.array(self.orbit_center)
-        self.translate(-center)
-        self.camera_pitch(yaw/100) # pitching, not rotating??
-        self.camera_yaw(pitch/100)
-        self.translate(center)
-        """ 
-        Being P the center point about you want to rotate (the "look at"or "target" point):
-
-        translate(-P)
-
-        rotate horizontal
-        rotate vertical
-
-        translate(P) """
 
 
 
@@ -127,6 +98,10 @@ class Camera:
 
     def camera_update_axii(self):
         # rotate = rotate_y(self.angleYaw) @ rotate_x(self.anglePitch)
+        """
+        Update the camera's axii (forward, up, right) after a pitch and yaw rotation
+        """
+        
         rotate = rotate_x(self.anglePitch) @ rotate_y(self.angleYaw)  # this concatenation gives right visual
         self.axiiIdentity()
         self.forward = self.forward @ rotate
@@ -135,9 +110,9 @@ class Camera:
 
     def camera_matrix(self):
         self.camera_update_axii()
-        return self.translate_matrix() @ self.rotate_matrix()
+        # return self.translate_matrix()
         # return self.translate_matrix() @ self.rotate_matrix()
-        # return self.rotate_matrix() @ self.translate_matrix() not working lol
+        return self.rotate_matrix() @ self.translate_matrix() # not working lol
 
     def translate_matrix(self):
         x, y, z, w = self.position
