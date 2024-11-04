@@ -19,10 +19,9 @@ def loop():
 
 if __name__ == "__main__":
     interface.initialize_interface()
-    interface.create_interface()
     PygameRenderer = preview.PygameRender(sv.WIDTH/2, sv.HEIGHT/5*4, interface.UI.preview_frame)
     loop()
-    interface.run_main_loop()
+    interface.UI.TkApp.mainloop()
 
 
 

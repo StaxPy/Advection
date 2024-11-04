@@ -115,7 +115,6 @@ def pygame_loop():
     # pan_offset_x = 0
     # pan_offset_y = 0
     
-    # print(pan_offset_x, pan_offset_y,camera.angle_x, camera.angle_y, camera.distance)
     for event in pygame.event.get():
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 3:  # Right mouse button
@@ -158,7 +157,6 @@ def pygame_loop():
         #     # screen = pygame.display.set_mode((event.w, event.h))
         #     interface.TkApp.columnconfigure(1, minsize=interface.TkApp.winfo_width()/2)
 
-    # print(pan_offset_x,pan_offset_y)
     
 
 

@@ -194,7 +194,9 @@ class PygameRender:
         font = pg.font.SysFont('Inter', 15)
         # particles_global_amount_display = font.render(f'Particles: {len(sv.textured_particles)}', True, (255, 255, 255))
         # self.screen.blit(particles_global_amount_display, (10, 10))
-        particles_global_size_display = font.render(f'Size: {tuple(np.round(self.texturedcloud.size, 2))}', True, (255, 255, 255))
+        
+        size = tuple(float(x) for x in np.round(self.texturedcloud.size, 2))
+        particles_global_size_display = font.render(f'Size: {size}', True, (255, 255, 255))
         self.screen.blit(particles_global_size_display, (10, 30))
         fps_display = font.render(f'FPS: {round(self.FPS)}', True, (255, 255, 255))
         self.screen.blit(fps_display, (10, 50))
