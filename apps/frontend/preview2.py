@@ -4,6 +4,7 @@ from frontend.rendering.projection import *
 import frontend.rendering.texture_data as td
 import frontend.rendering.particle as particle
 import shared.variables as sv
+import backend.file_processor as fp
 import pygame as pg
 import os
 
@@ -21,8 +22,13 @@ class PygameRender:
         self.screen = pg.display.set_mode(self.RES, pg.RESIZABLE)
         self.clock = pg.time.Clock()
         pg.font.init()
+
+        td.load_textures()
+        td.load_spritesheet_animations()
+
+        self.need_update = True
+
         self.create_object()
-        self.limit = 0
         # self.camera_angle_x = 0
         # self.camera_angle_y = 0
         # self.pan_offset_x = 0
@@ -36,16 +42,19 @@ class PygameRender:
         self.panning_active = False
         self.pan_last_mouse_pos = None
 
+        # pg.draw.rect(self.screen, pg.Color('white'), (50,50, 100,100))
+
         ''' TESTS'''
-        self.solo_textures, self.atlas_textures = td.load_textures()
-        # self.particle_texture = self.solo_textures['dust']
-        # self.particle_texture_atlas = self.atlas_textures['dust']
-        self.base_particle_size = (20,20)
 
-        self.frame_0 = td.get_atlas_frame(td.atlas_textures['dust'], 2, 8,8, 10).convert_alpha()
+        
 
-        print(self.frame_0)
-        # self.surface = particle.TexturedParticle(self.particle_texture, self.base_particle_size, (255,0,0))
+        # self.animation_cooldown = 50
+        # self.animation_frame = 0
+        # self.last_animation_update = pg.time.get_ticks()
+
+
+        # self.test_particle = particle.TexturedParticle(td.solo_textures['dust'], position=[0,0,0], color=(255,0,0), size=32)
+
 
 
         # self.surface = pg.Surface((50,50)).convert_alpha()
@@ -58,6 +67,9 @@ class PygameRender:
         self.camera = Camera(self, [1, 1, -5]) # Initialize the camera
         self.projection = Projection(self) # Instanciate the projection
         
+
+
+
         # self.object = Object3D(self) # Instanciate the object
         # self.object.translate([0.2,0.4,0.2]) # Move the object
         # # self.object.rotate_y(math.pi / 6) # Rotate the object
@@ -65,36 +77,35 @@ class PygameRender:
         # self.axes.translate([0.7,0.9,0.7])
         self.world_axes = Axes(self)
         self.world_axes.movement_flag = False
-        self.world_axes.scale(2.5)
+        # self.world_axes.scale(2.5)
         # self.world_axes.translate([0.7,0.9,0.7])
 
         self.grid = Grid(self, 10, 1.0)
 
-        # self.model = self.get_object_from_file('Testing_files/character_1.obj')
-        self.model = self.get_object_from_file('Testing_files/cube.obj')
+        # self.model = fp.get_object_from_file(self,'Testing_files/character_1.obj')
+        # self.model = fp.get_object_from_file(self,'Testing_files/cube.obj')
+        self.test_texturedcloud = TexturedParticlesCloud(self, fp.create_DataParticlesCloud_from_file_demo('Testing_files/character_1.obj'), td.solo_textures['dust'])
+
+        self.texturedcloud = TexturedParticlesCloud(self, fp.create_DataParticlesCloud_from_obj_file('Testing_files/character_1.obj'), td.solo_textures['dust'])
+
+        self.cloudsize = self.texturedcloud.size
         # self.model.translate([1,1,1])
 
-    def get_object_from_file(self, filename):
-            vertex, faces = [], []
-            with open(filename) as f:
-                for line in f:
-                    if line.startswith('v '):
-                        vertex.append([float(i) for i in line.split()[1:]] + [1])
-                    elif line.startswith('f'):
-                        faces_ = line.split()[1:]
-                        faces.append([int(face_.split('/')[0]) - 1 for face_ in faces_])
-            return Object3D(self, vertex, faces)
+
+        
 
     def draw(self):
-        self.screen.fill(pg.Color('gray15'))
+        self.screen.fill(pg.Color('gray9'))
         # self.model.example_rotation()
 
         # self.model.rotate_y(pg.time.get_ticks() % 0.05)
         # self.model.translate([0.002, 0.002, 0.002])
 
-        self.model.draw()
+        # self.model.draw()
         self.world_axes.draw()
-        self.grid.draw()
+        # self.test_texturedcloud.draw()
+        self.texturedcloud.draw()
+        # self.grid.draw()
         # self.axes.example_rotation()
         # self.axes.translate([0.002, 0.002, 0.002])
         # self.axes.draw()
@@ -128,11 +139,13 @@ class PygameRender:
 
         self.inputs_and_events()
         
-
-
+        
 
         [exit() for i in self.pg_events if i.type == pg.QUIT]
-        # pg.event.pump() not necessary after using .get() once
+
+        if not self.need_update: # Only update render if input has been detected
+            return
+        
 
         # for event in pg.event.get(pump=False):
         #     if event.type == pg.MOUSEBUTTONDOWN:
@@ -174,13 +187,36 @@ class PygameRender:
         #     if event.type == pg.QUIT:
         #         pg.quit()
         
+        if sv.preview_boolean.get() == 1: # NOT WORKING ?
+            self.draw()
 
-        self.draw()
         
-        ''' TESTS '''
-        # self.screen.blit(self.surface, (10,10))
-        self.screen.blit(self.frame_0, (100,100), special_flags=pg.BLEND_PREMULTIPLIED)
+        font = pg.font.SysFont('Inter', 15)
+        # particles_global_amount_display = font.render(f'Particles: {len(sv.textured_particles)}', True, (255, 255, 255))
+        # self.screen.blit(particles_global_amount_display, (10, 10))
+        particles_global_size_display = font.render(f'Size: {tuple(np.round(self.texturedcloud.size, 2))}', True, (255, 255, 255))
+        self.screen.blit(particles_global_size_display, (10, 30))
+        fps_display = font.render(f'FPS: {round(self.FPS)}', True, (255, 255, 255))
+        self.screen.blit(fps_display, (10, 50))
+
+
+        # Test texture blit
+        # self.screen.blit(self.test_particle.surface, (100,100)) # Show a single texture
+
+        ''' TEST ANIMATION'''
+        # current_time = pg.time.get_ticks()
+        # if current_time - self.last_animation_update >= self.animation_cooldown:
+        #     self.animation_frame += 1
+        #     self.last_animation_update = current_time
+        #     if self.animation_frame >= len(td.animation_textures['dust']):
+        #         self.animation_frame = 0
+        
+        # # Show current frame
+        # self.screen.blit(pg.transform.scale(td.animation_textures['dust'][self.animation_frame], (64,64)), (100,300))
+
         ''''''
+
+
 
         # pg.display.set_caption(str(self.clock.get_fps()))
         pg.display.flip()
@@ -189,11 +225,13 @@ class PygameRender:
 
     def inputs_and_events(self):
 
+
         self.camera.global_yaw = 0
         self.camera.global_pitch = 0
 
         for event in self.pg_events:
             if event.type == pg.MOUSEBUTTONDOWN:
+                self.need_update = True
                 if event.button == 3:  # Right mouse button
                     self.last_mouse_pos = event.pos
                 elif event.button == 2:  # Middle mouse button for pan
@@ -224,6 +262,7 @@ class PygameRender:
 
 
             if event.type == pg.MOUSEBUTTONUP:
+                self.need_update = False
                 if event.button == 3:   # Right mouse button released
                     self.last_mouse_pos = None
                 elif event.button == 2:  # Middle mouse button released
@@ -231,9 +270,10 @@ class PygameRender:
                     self.pan_last_mouse_pos = None
 
             if event.type == pg.MOUSEWHEEL:
+                self.need_update = True
                 zoom = event.y  # Zoom control with mouse wheel
                 self.camera.input_zoom(zoom)
-
+        
 
 
 # if __name__ == '__main__':

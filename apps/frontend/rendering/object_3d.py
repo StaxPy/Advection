@@ -1,5 +1,6 @@
 import pygame as pg
 from frontend.rendering.matrix_functions import *
+from frontend.rendering.particle import *
 from numba import njit
 
 
@@ -11,9 +12,63 @@ def any_func(arr, a, b):
 def inside_screen(vertex):
     return np.all((vertex[:3] > -1.5) & (vertex[:3] < 1.5))
 
+
+
 class TexturedParticlesCloud:
-    def __init__(self, render, TexturedParticles):
-        pass
+    def __init__(self, render, DataParticlesCloud, texture):
+        self.render = render
+        self.TexturedParticlesList = [(TexturedParticle(texture, DataParticle.position, DataParticle.color, DataParticle.size)) for DataParticle in DataParticlesCloud.DataParticlesList]
+        self.particle_positions = DataParticlesCloud.particle_positions
+        self.min_pos = DataParticlesCloud.min_pos
+        self.max_pos = DataParticlesCloud.max_pos
+        self.center = DataParticlesCloud.center
+        self.size = DataParticlesCloud.size
+        
+    def draw(self):
+        positions = self.particle_positions @ self.render.camera.camera_matrix() # Apply camera matrix
+        depths = np.array([position[2] for position in positions], dtype=np.float64)
+        positions = positions @ self.render.projection.projection_matrix # Project on -1, 1 plane
+        positions /= positions[:, -1].reshape(-1, 1) # Normalize
+
+        # MASK CLIPPING METHOD
+        visibility = np.array([(v[-2] >= self.render.camera.near_plane) and \
+                                (v[-2] <= self.render.camera.far_plane) and \
+                                (inside_screen(v)) for v in positions], dtype=bool)
+        
+        positions = positions @ self.render.projection.to_screen_matrix # Scale to screen size
+        positions = positions[:, :2] # Only keep x and y
+
+        sorted_indices = np.argsort(-depths)
+        sorted_particles = [self.TexturedParticlesList[i] for i in sorted_indices]
+        sorted_positions = positions[sorted_indices]
+        sorted_visibility = visibility[sorted_indices]
+        sorted_depths = depths[sorted_indices]
+
+        blits_sequence = []
+        for index, particle in enumerate(sorted_particles):
+            if sorted_visibility[index]:
+                scale = 10 / sorted_depths[index] #TODO: find correct scaling value
+                if scale <= 0.1 :
+                    scale = 0.1
+                scaled_particle = pg.transform.scale_by(particle.surface, scale)
+                position = np.add(sorted_positions[index], -scale / 2)
+                # self.render.screen.blit(scaled_particle, position)
+                blits_sequence.append((scaled_particle, position))
+
+        self.render.screen.fblits(blits_sequence)
+                
+
+
+class DataParticlesCloud:
+    def __init__(self, DataParticlesList, min_pos, max_pos):
+        self.DataParticlesList = DataParticlesList
+        self.particle_positions = np.array([particle.position for particle in self.DataParticlesList], dtype=np.float64)
+        self.min_pos = min_pos
+        self.max_pos = max_pos
+        self.center = np.add(self.max_pos, self.min_pos)
+        self.size = np.subtract(self.max_pos, self.min_pos)
+
+
 
 class Object3D:
     def __init__(self,render, vertices='', faces=''):
@@ -24,7 +79,7 @@ class Object3D:
 
         self.font = pg.font.SysFont('Inter', 30, bold=True)
         self.color_faces = [(pg.Color('orange'), face) for face in self.faces]
-        self.movement_flag, self.draw_vertices = True, True
+        self.movement_flag, self.draw_vertices, self.draw_faces = True, True, False
         self.label = ''
         
     def draw(self):
@@ -45,7 +100,6 @@ class Object3D:
 
 
     def screen_projection(self):
-        # print(self.vertices)
         
         vertices = self.vertices @ self.render.camera.camera_matrix() # Apply camera matrix
         vertices = vertices @ self.render.projection.projection_matrix # Project on -1, 1 plane
@@ -71,25 +125,27 @@ class Object3D:
         vertices = vertices @ self.render.projection.to_screen_matrix # Scale to screen size
         vertices = vertices[:, :2] # Only keep x and y
 
-        # print("vertices", vertices)
-        for index, color_face in enumerate(self.color_faces):
-            color, face = color_face
+        if self.draw_faces:
+            for index, color_face in enumerate(self.color_faces):
+                color, face = color_face
 
-            # Check if all face indices are valid for current vertices
-            if any(i >= len(vertices) for i in face):
-                continue  # Skip faces with out-of-bounds (missing) vertices
+                # Check if all face indices are valid for current vertices
+                if any(i >= len(vertices) for i in face):
+                    continue  # Skip faces with out-of-bounds (missing) vertices
 
-            polygon = vertices[face] # Get vertices for current face
-            if all (vertices_visibility[i] for i in face):
-                pg.draw.polygon(self.render.screen, color, polygon, 1)
-                if self.label:
-                    text = self.font.render(self.label[index], True, pg.Color('white'))
-                    self.render.screen.blit(text, polygon[-1])
+                polygon = vertices[face] # Get vertices for current face
+                if all (vertices_visibility[i] for i in face):
+                    pg.draw.polygon(self.render.screen, color, polygon, 1)
+                    if self.label:
+                        text = self.font.render(self.label[index], True, pg.Color('white'))
+                        self.render.screen.blit(text, polygon[-1])
 
         if self.draw_vertices:
             for index, vertex in enumerate(vertices):
                 if vertices_visibility[index]:
                     pg.draw.circle(self.render.screen, pg.Color('white'), vertex, 2)
+
+
 
     def translate(self, pos):
         self.vertices = self.vertices @ translate(pos)
@@ -127,6 +183,7 @@ class Axes(Object3D):
         self.color_faces = [pg.Color('red'),pg.Color('green'),pg.Color('blue')]
         self.color_faces = [(color, face) for color, face in zip(self.color_faces, self.faces)]
         self.draw_vertices = False
+        self.draw_faces = True
         self.label = 'XYZ'
 
 class Grid(Object3D):
@@ -149,17 +206,8 @@ class Grid(Object3D):
         self.vertices = np.array(self.vertices)
         self.translate([0.001, 0.001, 0.001]) # To avoid division by zero
 
-        # self.start_vertices_x = np.array([(i * self.cell_size, 0, 0, 1) for i in range(0, self.num_cells+1, 1)])
-        # self.start_vertices_z = np.array([(0, i * self.cell_size, 0,1) for i in range(0, self.num_cells+1, 1)])
-        # self.end_vertices_x = np.array([(i * self.cell_size, 0, self.grid_size, 1) for i in range(0, self.num_cells+1, 1)])
-        # self.end_vertices_z = np.array([(self.grid_size, 0, i * self.cell_size, 1) for i in range(0, self.num_cells+1, 1)])
-
-
-        
-
 
     def draw(self):
-        # print(self.start_vertices_z, self.end_vertices_z, self.start_vertices_x, self.end_vertices_x)
 
 
         
@@ -176,3 +224,24 @@ class Grid(Object3D):
 
 
 
+class DistanceTest():
+    def __init__(self, render):
+        self.render = render
+        self.vertices = np.array([
+            (1, 1, 1, 1),  # vertex 0
+        ])
+        self.camera_fov_factor = 2 * math.tan(render.camera.v_fov / 2)
+
+    def draw(self):
+        vertices = self.vertices @ self.render.camera.camera_matrix() # Apply camera matrix
+        z = vertices[0][2]
+        vertices = vertices @ self.render.projection.projection_matrix # Project on -1, 1 plane
+        vertices /= vertices[:, -1].reshape(-1, 1) # Normalize
+
+        vertices = vertices @ self.render.projection.to_screen_matrix # Scale to screen size
+        vertices = vertices # Only keep x and y
+        
+        for vertice in vertices:
+            # pg.draw.rect(self.render.screen, pg.Color('white'), (i,50,50))
+            scale = 1150 / z
+            pg.draw.rect(self.render.screen, pg.Color('white'), (vertice[0],vertice[1], scale,scale))

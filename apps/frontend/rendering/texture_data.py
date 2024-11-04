@@ -1,28 +1,44 @@
 import pygame as pg
 
-solo_texture_data = {
+solo_textures_data = {
     'dust': {'file_path':'apps/frontend/assets/particle_dust.png'},
 }
 
-atlas_texture_data = {
+spritesheet_textures_data = {
     'dust': {'file_path':'apps/frontend/assets/particle_dust_atlas.png'},
+}
+
+spritesheet_animations_data = {
+    'dust': {'spritesheet':'dust', 'frames':6, 'width':8, 'height':8, 'start_pos':(0,0), 'offset_x':0, 'offset_y':8},
 }
 
 
 def load_textures() -> dict:
-    global solo_texture_data,solo_textures,atlas_textures
+    global solo_textures_data,spritesheet_textures_data, solo_textures,spritesheet_textures
     solo_textures = {}
-    atlas_textures = {}
-    for name,data in solo_texture_data.items():
+    spritesheet_textures = {}
+
+    # Load solo textures
+    for name,data in solo_textures_data.items():
         solo_textures[name] = pg.image.load(data['file_path']).convert_alpha().premul_alpha_ip()
-    for name,data in atlas_texture_data.items():
-        atlas_textures[name] = pg.image.load(data['file_path']).convert_alpha().premul_alpha_ip()
-    return solo_textures, atlas_textures
+    # Load spritesheet textures
+    for name,data in spritesheet_textures_data.items():
+        spritesheet_textures[name] = pg.image.load(data['file_path']).convert_alpha().premul_alpha_ip()
 
-def get_atlas_frame(atlas, frame, width, height, scale):
-    image = pg.Surface((width, height)).convert_alpha()
-    image.blit(atlas, (0, 0), (0, frame * height, width, height))
+def load_spritesheet_animations():
+    global animation_textures
+    animation_textures = {}
+
+    for name,data in spritesheet_animations_data.items():
+        animation_textures[name] = []
+        for i in range(data['frames']): # For each frame
+            animation_textures[name].append(get_spritesheet_frame(spritesheet_textures[data['spritesheet']], data['offset_x']*i, data['offset_y']*i, data['width'], data['height'], 1))
+
+
+
+
+def get_spritesheet_frame(spritesheet, pos_x, pos_y, width, height, scale):
+    image = pg.Surface((width, height), pg.SRCALPHA).convert_alpha().premul_alpha_ip()
+    image.blit(spritesheet, (0, 0), (pos_x, pos_y, width, height))
     image = pg.transform.scale(image, (width * scale, height * scale))
-
-    # NOT WORKING WITH ALPHA YET
     return image
