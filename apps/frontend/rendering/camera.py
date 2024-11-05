@@ -16,14 +16,12 @@ class Camera:
         self.zoom_speed = 0.05
         self.rotation_speed = 0.005
 
-        self.anglePitch = 0
-        self.angleYaw = 0
+        self.anglePitch = math.pi /12
+        self.angleYaw = -math.pi /4*3
         self.angleRoll = 0
 
         self.offset = 1
 
-        self.global_yaw = 0
-        self.global_pitch = 0
 
 
         self.orbit_center = [0, 0, 0]

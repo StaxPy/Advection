@@ -29,20 +29,10 @@ class PygameRender:
         self.need_update = True
 
         self.create_object()
-        # self.camera_angle_x = 0
-        # self.camera_angle_y = 0
-        # self.pan_offset_x = 0
-        # self.pan_offset_y = 0
-        # self.camera_distance = 3
-        # self.panning_active = False
-        # self.pan_last_mouse_pos = None
-        # self.last_mouse_pos = None
 
         self.last_mouse_pos = None
         self.panning_active = False
         self.pan_last_mouse_pos = None
-
-        # pg.draw.rect(self.screen, pg.Color('white'), (50,50, 100,100))
 
         ''' TESTS'''
 
@@ -64,7 +54,7 @@ class PygameRender:
 
 
     def create_object(self):
-        self.camera = Camera(self, [1, 1, -5]) # Initialize the camera
+        self.camera = Camera(self, [0, 1, -5]) # Initialize the camera
         self.projection = Projection(self) # Instanciate the projection
         
 
@@ -139,6 +129,7 @@ class PygameRender:
 
         self.inputs_and_events()
         
+
         
 
         [exit() for i in self.pg_events if i.type == pg.QUIT]
@@ -228,9 +219,6 @@ class PygameRender:
     def inputs_and_events(self):
 
 
-        self.camera.global_yaw = 0
-        self.camera.global_pitch = 0
-
         for event in self.pg_events:
             if event.type == pg.MOUSEBUTTONDOWN:
                 self.need_update = True
@@ -245,12 +233,9 @@ class PygameRender:
                 if self.last_mouse_pos:  # Rotate camera with left mouse
                     dx = event.pos[0] - self.last_mouse_pos[0]
                     dy = event.pos[1] - self.last_mouse_pos[1]
-                    self.camera.global_yaw = dx
-                    self.camera.global_pitch = dy
-                    # NOT INTENTED EFFECT ?
+
                     self.camera.input_rotation(dx, dy)
-                    # self.camera.rotate_around_center(dx,dy)
-                    # self.camera.input_orbit(dx, dy)
+
 
 
                     self.last_mouse_pos = event.pos
