@@ -2,9 +2,13 @@ import tkinter as tk
 import customtkinter
 import CTkColorPicker
 import os, random
-import backend.file_operations as fo
-import shared.variables as sv
+import backend.file_dialog as fd
+import backend.file_processor as fp
+import frontend.preview2 as preview
+from shared.variables import *
 from PIL import Image
+import frontend.color_operations as co
+import threading
 
 class Styles():
     hover_color = "#ffffff"
@@ -26,8 +30,8 @@ class Styles():
     # Menu
     normal_menu_style = {"fg_color":black,"button_color":medium_gray,"dropdown_fg_color":dark_gray,"dropdown_text_color":white,"button_hover_color":hover_color} 
     # Slider
-    disabled_slider_style = {"state":"disabled","bg_color":'black',"fg_color":medium_gray,'progress_color': medium_gray,"border_color":'black',"button_color":'#3a3a3a',"button_hover_color":'#3a3a3a'}
-    normal_slider_style = {"state":"normal","bg_color":'black',"fg_color":medium_gray,'progress_color': medium_gray,"border_color":'black',"button_color":hover_color,"button_hover_color":hover_color}
+    disabled_slider_style = {"state":"disabled","bg_color":almost_black,"fg_color":medium_gray,'progress_color': medium_gray,"border_color":almost_black,"button_color":'#3a3a3a',"button_hover_color":'#3a3a3a'}
+    normal_slider_style = {"state":"normal","bg_color":almost_black,"fg_color":medium_gray,'progress_color': medium_gray,"border_color":almost_black,"button_color":hover_color,"button_hover_color":hover_color}
 
     InterFont = ""
 
@@ -36,27 +40,24 @@ class Styles():
 class Input():
     path = ""
 
-class SliderDebouncer:
-    def __init__(self, root, refresh_callback):
+class Debouncer:
+    def __init__(self, root, delay, normal_function, debounced_function):
         self.root = root
-        self.refresh_callback = refresh_callback
-        self.delay_time = 500  # 500 milliseconds (0.5 seconds)
+        self.normal_function = normal_function
+        self.debounced_function = debounced_function
+        self.delay_time = delay  # 500 milliseconds = 0.5 seconds
         self.after_id = None
 
-    def debounced_refresh(self, value):
-        UI.preview_framenumber_label.configure(text = str(int(value)))
+    def debouncer(self, value):
+        self.normal_function(value)
+        
         # Cancel any previous refresh if the slider was moved again
         if self.after_id is not None:
             self.root.after_cancel(self.after_id)
         
         # Schedule the new refresh after a delay
-        self.after_id = self.root.after(self.delay_time, lambda: self.refresh_preview(value))
+        self.after_id = self.root.after(self.delay_time, lambda: self.debounced_function(value))
 
-    def refresh_preview(self, value):
-        # print(f"Preview refreshed with value: {value}")
-        # Call your original refresh function
-        UI.preview_framenumber.set(value)
-        self.refresh_callback()
 
 
 class UI():
@@ -96,87 +97,132 @@ class UI():
         export_frame_border.grid(row = 1, column = 1,sticky="nsew")
         export_frame.grid(row = 0, column = 0,sticky="nsew",pady=15,padx=10)
 
+        highlight_progress = 0
 
         """ FUNCTIONS """
 
         def focus_on_click(event):
             event.widget.focus_set() # Focus on selected element
 
-        def verify_widget(self, event):
+        def verify_particle_size_widget(event):
             print("Verifying",event.widget)
-            UI.TkApp.focus_set() # Unfocus
+            # UI.TkApp.focus_set() # Unfocus
 
-        def refresh_preview(self):
+        def refresh_preview():
             print("refresh_preview")
-            if len(sv.sequence_files) == 0: # Stops if no sequence is found.
-                return
+            # if len(InputData.sequence_files) == 0: # Stops if no sequence was found. > why??
+            #     return
             sv.loading_done = False
+            # Start the loading animation in a separate thread
+
+            # loading_thread = threading.Thread(target=preview.loading_animation,daemon=True)
+            # loading_thread.start()
+
+
+            path = InputData.path
+ 
+
+            if SequenceData.toggle.get() == 1:
+                path = InputData.sequence_files[int(PygameSettings.frame.get())]["path"] # Change the file path to the selected frame
+                
+
+            # Read particle positions from file
+            if InputData.path:
+                PygameParticles.DataParticlesCloud = fp.create_DataParticlesCloud_from_file(path) #TODO: add resize
+                PygameParticles.TexturedParticlesCloud = PygameSettings.PygameRenderer.DataParticlesCloud_to_TexturedParticlesCloud(PygameParticles.DataParticlesCloud)
+                PygameSettings.PygameRenderer.refresh_cloud_stats()
+                preview.need_update = True
+            
+            else:
+                # Set loading_done to True to stop the loading animation
+                sv.loading_done = True
+                return
+            
+
+            
+            # Set loading_done to True to stop the loading animation
+            sv.loading_done = True
+
+            PygameTempData.toggle_changed = True
+
 
         def find_input_dialog():
-            initial_directory = fo.get_json_memory("input_path") # Retrive the last path from the JSON file
+            print("find_input_dialog")
+            initial_directory = fd.get_json_memory("input_path") # Retrive the last path from the JSON file
             dialog_result = tk.filedialog.askopenfilename(initialdir=initial_directory) # Ask for a file
             if dialog_result == "":
                 print("User exited file dialog without selecting a file")
                 return
-            sv.input_path = dialog_result
-            fo.update_json_memory("input_path",os.path.dirname(sv.input_path)) # Update the JSON file
+            InputData.path = dialog_result
+            fd.update_json_memory("input_path",os.path.dirname(InputData.path)) # Update the JSON file
             
-            UI.input_path_entry.cget("textvariable").set(sv.input_path)
+            UI.input_path_entry.cget("textvariable").set(InputData.path)
+            fd.find_file_sequence(InputData.path) # Search for frames
 
-            fo.find_file_sequence(sv.input_path) # Search for frames
-
-            # Update the sequence section
-            UI.sequence_start_Entry.cget("textvariable").set(str(sv.first_frame))
-            UI.sequence_end_Entry.cget("textvariable").set(str(sv.last_frame))
-            UI.sequence_detected_label.configure(text = "Frames detected: " + str(sv.last_frame-sv.first_frame+1))
-
-            if sv.first_frame == sv.last_frame: # If the sequence is 1 frame long
-                UI.sequence_detected_label.configure(text_color='#9c9c9c')
-                UI.sequence_checkbox.configure(state="disabled") # Disable the checkbox (no more frames to select)
-                if UI.sequence_checkbox.get() == 1:
-                    UI.sequence_checkbox.toggle()
-            else: # If the sequence is more than 1 frame long
-                UI.sequence_detected_label.configure(text_color=Styles.white)
-                UI.sequence_checkbox.configure(state="normal") # Allow the checkbox to be selected
-                if UI.sequence_checkbox.get() == 0:
-                    UI.sequence_checkbox.toggle()
-
-            # Change the preview to the first_frame 
-            UI.preview_framenumber.set(sv.first_frame)
-
-            UI.preview_framenumber_slider.configure(from_=sv.first_frame,to=sv.last_frame, number_of_steps=sv.last_frame-1)
-            UI.preview_framenumber_label.configure(text = str(sv.first_frame))
-
+            UI.update_sequence_section()
+            UI.update_preview_frame_section()
+            UI.toggle_sequence_section()
             UI.refresh_preview()
 
 
+
         def find_output_dialog():
-            initial_directory = fo.get_json_memory("output_path")
+            initial_directory = fd.get_json_memory("output_path")
             dialog_result = tk.filedialog.askdirectory(initialdir=initial_directory)
             if dialog_result == "":
                 print("User exited file dialog without selecting a folder")
                 return
             
-            sv.output_path = dialog_result
-            fo.update_json_memory("output_path",sv.output_path)
+            OutputData.path = dialog_result
+            fd.update_json_memory("output_path",OutputData.path)
 
-            UI.output_path_entry.cget("textvariable").set(sv.output_path)
-
+            UI.output_path_entry.cget("textvariable").set(OutputData.path)
+        
         def update_sequence_section():
+            print("update_sequence_section")
+            # Update the sequence section
+            UI.sequence_start_Entry.cget("textvariable").set(str(InputData.first_frame))
+            UI.sequence_end_Entry.cget("textvariable").set(str(InputData.last_frame))
+            UI.sequence_detected_label.configure(text = "Frames detected: " + str(InputData.last_frame-InputData.first_frame+1))
+            if InputData.first_frame == InputData.last_frame: # If the sequence is 1 frame long
+                InputData.last_frame += 1 # To prevent slider error
+                UI.sequence_detected_label.configure(text_color=Styles.light_gray)
+                # PygameSettings.toggle.set(False)
+                if UI.sequence_checkbox.get() == True:
+                    UI.sequence_checkbox.toggle() # Unckeck sequence and update the UI
+                UI.sequence_checkbox.configure(state="disabled") # Make sequence uncheckable
+            else: # If the sequence is more than 1 frame long
+                UI.sequence_detected_label.configure(text_color=Styles.white)
+                UI.sequence_checkbox.configure(state="normal") # Make sequence uncheckable
+                if UI.sequence_checkbox.get() == False:
+                    UI.sequence_checkbox.toggle() # Check the sequence and update the UI
+
+
+        def update_preview_frame_section():
+            print("update_preview_frame_section")
+            # Change the preview to the first_frame 
+            PygameSettings.frame.set(InputData.first_frame)
+            UI.preview_frame_slider.configure(from_=InputData.first_frame,to=InputData.last_frame, number_of_steps=InputData.last_frame-1)
+            
+            UI.slider_update_preview_frame_label(InputData.first_frame)
+
+        
+
+        def toggle_sequence_section():
 
             # If the checkbox was checked, 
             if UI.sequence_checkbox.get() == 1:
                 UI.sequence_start_Entry.configure(**Styles.normal_entry_style,placeholder_text="start")
                 UI.sequence_end_Entry.configure(**Styles.normal_entry_style,placeholder_text="end")
                 # preview_frame_slider.pack(side=tk.BOTTOM, expand=False, padx=50, pady=50)
-                UI.preview_framenumber_slider.configure(**Styles.normal_slider_style)
+                UI.preview_frame_slider.configure(**Styles.normal_slider_style)
 
 
             if UI.sequence_checkbox.get() == 0:
                 UI.sequence_start_Entry.configure(**Styles.disabled_entry_style)
                 UI.sequence_end_Entry.configure(**Styles.disabled_entry_style)
                 # preview_frame_slider.pack_forget()
-                UI.preview_framenumber_slider.configure(**Styles.disabled_slider_style)
+                UI.preview_frame_slider.configure(**Styles.disabled_slider_style)
 
 
         def ask_color():
@@ -185,9 +231,35 @@ class UI():
             UI.particle_color_button.configure(fg_color=color)
             UI.particle_hexcode_entry.cget("textvariable").set(color)
 
-        def export (self):
+        def slider_update_preview_frame(frame):
+            PygameSettings.frame.set(frame)
+            UI.refresh_preview()
+
+        def slider_update_preview_frame_label(frame):
+            UI.preview_frame_label.configure(text = str(int(frame)))
+
+        def highlight_frame_loop(frame):
+            color = co.interpolate_colors(Styles.special_color,Styles.dark_gray,UI.highlight_progress/100)
+            frame.configure(fg_color=color,border_color=color)
+
+
+            if UI.highlight_progress <= 100:
+                UI.highlight_progress += 5
+
+                UI.TkApp.after(16,UI.highlight_frame_loop,frame)
+            else:
+                UI.highlight_progress = 0
+
+        def export ():
             print("Export")
-        
+
+            if InputData.path == None:
+                UI.highlight_frame_loop(UI.input_frame)
+                # tk.messagebox.showerror("Output folder required", "Please select an output folder",icon="info")
+                return
+            
+            if OutputData.path == None:
+                UI.highlight_frame_loop(UI.export_frame)
         """ END OF FUNCTION DEFINITIONS """
 
 
@@ -195,13 +267,11 @@ class UI():
 
         TkApp.bind_all('<Button-1>', focus_on_click)
 
-        # Debouncer that wraps the original refresh function
-        slider_debouncer = SliderDebouncer(TkApp, refresh_preview)
 
 
 
 
-        """ 1 CONFIG """
+        """ 1 MAIN FRAMES """
         # ELEMENT PARAMETERS
         input_frame = customtkinter.CTkFrame(config_frame, fg_color=Styles.dark_gray,border_color=Styles.dark_gray,border_width=2)
         sequence_frame = customtkinter.CTkFrame(config_frame, fg_color=Styles.dark_gray,border_color=Styles.dark_gray,border_width=2)
@@ -246,11 +316,49 @@ class UI():
 
         """ 2 SEQUENCE """
         # ELEMENT PARAMETERS
-        sv.sequence_boolean = tk.IntVar(value=0)
-        sequence_checkbox = customtkinter.CTkCheckBox(sequence_frame,state="disabled",variable=sv.sequence_boolean,command=update_sequence_section, text="Sequence", onvalue=True, offvalue=False,**Styles.checkbox_style)
+        SequenceData.toggle = tk.IntVar(value=SequenceData.toggle)
+        sequence_checkbox = customtkinter.CTkCheckBox(sequence_frame,state="disabled",variable=SequenceData.toggle,command=toggle_sequence_section, text="Sequence", onvalue=True, offvalue=False,**Styles.checkbox_style)
         sequence_detected_label = customtkinter.CTkLabel(sequence_frame, text="Frames detected: ~",text_color=Styles.medium_gray,font=Styles.InterFont)
-        sequence_start_Entry = customtkinter.CTkEntry(sequence_frame, **Styles.disabled_entry_style,textvariable=customtkinter.StringVar(value="start"),font=Styles.InterFont)
-        sequence_end_Entry = customtkinter.CTkEntry(sequence_frame,**Styles.disabled_entry_style,textvariable=customtkinter.StringVar(value="end"),font=Styles.InterFont)
+        SequenceData.start = customtkinter.StringVar(value="start")
+        SequenceData.end = customtkinter.StringVar(value="end")
+        sequence_start_Entry = customtkinter.CTkEntry(sequence_frame, **Styles.disabled_entry_style,textvariable=SequenceData.start,font=Styles.InterFont)
+        sequence_end_Entry = customtkinter.CTkEntry(sequence_frame,**Styles.disabled_entry_style,textvariable=SequenceData.end,font=Styles.InterFont)
+        def verify_sequence_start_entry(event):
+            """
+            Verify that the start sequence value is valid (i.e. within the range of the detected sequence and less than the end value), and correct it.
+            """
+            try :
+                value = int(SequenceData.start.get())
+                if value >= int(SequenceData.end.get()):
+                    SequenceData.start.set(int(SequenceData.end.get())-1)
+                elif value < InputData.first_frame :
+                    SequenceData.start.set(InputData.first_frame)
+
+            except:
+                SequenceData.start.set(InputData.first_frame)
+                
+                
+        
+        def verify_sequence_end_entry(event):
+            """
+            Verify that the end sequence value is valid (i.e. within the range of the detected sequence and more than the start value), and correct it.
+            """
+            try :
+                value = int(SequenceData.end.get())
+                if value <= int(SequenceData.start.get()):
+                    SequenceData.end.set(int(SequenceData.start.get())+1)
+                elif value > InputData.last_frame :
+                    SequenceData.end.set(InputData.last_frame)
+            except:
+                SequenceData.end.set(InputData.last_frame)
+
+        sequence_start_Entry.bind("<FocusOut>", verify_sequence_start_entry)
+        sequence_start_Entry.bind("<Return>", verify_sequence_start_entry)
+        sequence_end_Entry.bind("<FocusOut>", verify_sequence_end_entry)
+        sequence_end_Entry.bind("<Return>", verify_sequence_end_entry)
+
+        
+
 
 
         # GRID PARAMETERS
@@ -268,7 +376,8 @@ class UI():
         """ 2 ALIGNMENT """
         # ELEMENT PARAMETERS
         coordinate_axis_label = customtkinter.CTkLabel(alignment_frame, text="Coordinate Axis",text_color=Styles.light_gray,font=Styles.InterFont)
-        coordinate_axis_menu = customtkinter.CTkOptionMenu(alignment_frame,dropdown_font=Styles.InterFont,values=["X-Y","Y-Z","Z-X"],**Styles.normal_menu_style)
+        AlignmentData.coordinate_axis = customtkinter.StringVar(value="X-Y")
+        coordinate_axis_menu = customtkinter.CTkOptionMenu(alignment_frame,dropdown_font=Styles.InterFont,values=["X-Y","Y-Z","Z-X"],variable=AlignmentData.coordinate_axis,**Styles.normal_menu_style)
         rotation_label = customtkinter.CTkLabel(alignment_frame, text="Rotation",text_color=Styles.light_gray,font=Styles.InterFont)
         rotation_menu = customtkinter.CTkOptionMenu(alignment_frame,dropdown_font=Styles.InterFont,values=["0°","90°","180°","270°"],**Styles.normal_menu_style)
         horizontal_align_label = customtkinter.CTkLabel(alignment_frame, text="Horizontal Align",text_color=Styles.light_gray,font=Styles.InterFont)
@@ -384,8 +493,8 @@ class UI():
         # ELEMENT PARAMETERS
         particle_size_label = customtkinter.CTkLabel(particle_frame, text="Particle Size",text_color=Styles.light_gray,font=Styles.InterFont)
         particle_size_entry = customtkinter.CTkEntry(particle_frame, **Styles.normal_entry_style,textvariable=customtkinter.StringVar(value="1.00"),font=Styles.InterFont)
-        particle_size_entry.bind("<FocusOut>", verify_widget)
-        particle_size_entry.bind("<Return>", verify_widget)
+        particle_size_entry.bind("<FocusOut>", verify_particle_size_widget)
+        particle_size_entry.bind("<Return>", verify_particle_size_widget)
 
         
         sv.particle_type = tk.StringVar(value=sv.particle_type)
@@ -437,8 +546,8 @@ class UI():
 
 
 
-        # sv.sequence_boolean = tk.IntVar(value=0)
-        # sequence_checkbox = customtkinter.CTkCheckBox(input_frame,state="disabled",variable=sv.sequence_boolean,command=update_sequence_section, text="Sequence", onvalue=True, offvalue=False,checkbox_width=20,checkbox_height=20,text_color=Styles.white,border_color=Styles.white,border_width=1)
+        # SequenceData.toggle = tk.IntVar(value=0)
+        # sequence_checkbox = customtkinter.CTkCheckBox(input_frame,state="disabled",variable=SequenceData.toggle,command=update_sequence_section, text="Sequence", onvalue=True, offvalue=False,checkbox_width=20,checkbox_height=20,text_color=Styles.white,border_color=Styles.white,border_width=1)
         # sequence_checkbox.grid(column=1, row=2, padx=0, pady=0)
         # UI.sequence_start_Entry = customtkinter.CTkEntry(input_frame, **Styles.disabled_entry_style,textvariable=customtkinter.StringVar(value="start"))
         # UI.sequence_start_Entry.grid(column=2, row=2, padx=0, pady=0)
@@ -473,12 +582,13 @@ class UI():
         # launch_button.pack(side=tk.RIGHT, expand=True)
 
 
-        preview_framenumber_label = customtkinter.CTkLabel(preview_frame, text = 'frame',text_color=Styles.medium_gray,bg_color='black',width=100)
-        # preview_framenumber_label.pack(side=tk.BOTTOM, expand=False, padx=0, pady=0,)
+        preview_frame_label = customtkinter.CTkLabel(preview_frame, text = 'frame',text_color=Styles.medium_gray,bg_color=Styles.almost_black,width=100)
+        preview_frame_label.pack(side=tk.BOTTOM, expand=False, padx=0, pady=0,)
 
-        preview_framenumber = customtkinter.IntVar(value=0)
-        preview_framenumber_slider = customtkinter.CTkSlider(preview_frame,from_=0, to=100,number_of_steps=10,variable=preview_framenumber,**Styles.disabled_slider_style,command=slider_debouncer.debounced_refresh)
-        # preview_framenumber_slider.pack(side=tk.BOTTOM, expand=False, padx=0, pady=0)
+        PygameSettings.frame = customtkinter.IntVar(value=0)
+        preview_frame_slider_debouncer = Debouncer(TkApp, 500, slider_update_preview_frame_label, slider_update_preview_frame)
+        preview_frame_slider = customtkinter.CTkSlider(preview_frame,from_=0, to=100,number_of_steps=10,variable=PygameSettings.frame,**Styles.disabled_slider_style,command=preview_frame_slider_debouncer.debouncer)
+        preview_frame_slider.pack(side=tk.BOTTOM, expand=False, padx=0, pady=0)
 
 
 
@@ -489,8 +599,11 @@ class UI():
         # preview_button = customtkinter.CTkButton(pygame_frame, text = 'preview',  command = refresh_preview,bg_color='black',fg_color='#7a7a7a',hover_color=Styles.hover_color,text_color=Styles.white)
         # preview_button.pack(side=tk.TOP, expand=False, padx=50, pady=10)
 
-        sv.preview_boolean = tk.IntVar(value=sv.preview_boolean)
-        preview_toggle_checkbox = customtkinter.CTkCheckBox(preview_frame,text="Preview",text_color=Styles.white,command=None, variable=sv.preview_boolean,onvalue=True, offvalue=False,checkbox_width=20,checkbox_height=20,fg_color='#7a7a7a',hover_color=Styles.hover_color,bg_color='black',border_color=Styles.white,border_width=1)
+        PygameSettings.toggle = tk.IntVar(value=sv.preview_boolean)
+        def toggle_preview():
+            PygameTempData.toggle_changed = True
+
+        preview_toggle_checkbox = customtkinter.CTkCheckBox(preview_frame,text="Preview",text_color=Styles.white,command=toggle_preview, variable=PygameSettings.toggle,onvalue=True, offvalue=False,checkbox_width=20,checkbox_height=20,fg_color=Styles.light_gray,hover_color=Styles.hover_color,bg_color=Styles.almost_black,border_color=Styles.white,border_width=1)
         preview_toggle_checkbox.pack(side=tk.RIGHT, expand=False, padx=0, pady=0)
 
 

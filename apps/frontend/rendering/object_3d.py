@@ -1,7 +1,9 @@
 import pygame as pg
 from frontend.rendering.matrix_functions import *
 from frontend.rendering.particle import *
+from shared.variables import *
 from numba import njit
+
 
 
 @njit(fastmath=True)
@@ -23,9 +25,12 @@ class TexturedParticlesCloud:
         self.max_pos = DataParticlesCloud.max_pos
         self.center = DataParticlesCloud.center
         self.size = DataParticlesCloud.size
+        self.count = DataParticlesCloud.count
         
     def draw(self):
-        positions = self.particle_positions @ self.render.camera.camera_matrix() # Apply camera matrix
+        positions = self.particle_positions @ rotate_y(AlignmentData.coordinate_axis_y[AlignmentData.coordinate_axis.get()]) # TEST 
+        positions = positions @ rotate_x(AlignmentData.coordinate_axis_z[AlignmentData.coordinate_axis.get()]) # TEST 
+        positions =positions @ self.render.camera.camera_matrix() # Apply camera matrix
         depths = np.array([position[2] for position in positions], dtype=np.float64)
         positions = positions @ self.render.projection.projection_matrix # Project on -1, 1 plane
         positions /= positions[:, -1].reshape(-1, 1) # Normalize
@@ -59,9 +64,11 @@ class TexturedParticlesCloud:
                 
 
 
+
 class DataParticlesCloud:
     def __init__(self, DataParticlesList, min_pos, max_pos):
         self.DataParticlesList = DataParticlesList
+        self.count = len(DataParticlesList)
         self.particle_positions = np.array([particle.position for particle in self.DataParticlesList], dtype=np.float64)
         self.min_pos = min_pos
         self.max_pos = max_pos
@@ -90,13 +97,9 @@ class Object3D:
     def example_rotation(self):
         if self.movement_flag:
             
-            self.rotate_y(pg.time.get_ticks() % 0.05) # Example rotation
+            self.rotate_y(self.vertices,pg.time.get_ticks() % 0.05) # Example rotation
 
 
-    def global_rotation(self): # REALLY WEIRD
-        
-        self.rotate_x(-self.render.camera.global_pitch/10)
-        self.rotate_y(self.render.camera.global_yaw/10)
 
 
     def screen_projection(self):

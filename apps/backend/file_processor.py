@@ -61,16 +61,18 @@ def create_DataParticlesCloud_from_file_demo(filename) -> DataParticlesCloud:
 
 
 def create_DataParticlesCloud_from_file(file_path, resize=False, resize_dimensions=(1.0, 1.0, 1.0)):
-    particles = []
+    print("create_DataParticlesCloud_from_file")
     
     if file_path.endswith('.obj'):
-        particles_data = create_DataParticlesCloud_from_obj_file(file_path,resize,resize_dimensions)
-        particles += particles_data[0]
-        global_size = particles_data[1]
-    return particles, global_size
+        DataParticlesCloud = create_DataParticlesCloud_from_obj_file(file_path,resize,resize_dimensions)
+
+
+    return DataParticlesCloud
+
 
 
 def create_DataParticlesCloud_from_obj_file(obj_file_path, resize=False, resize_dimensions=(1.0, 1.0, 1.0)):
+    print("create_DataParticlesCloud_from_obj_file")
     """Reads an OBJ file and extracts vertex positions, texture coordinates, faces, and materials.
        If `normalize=True`, scales the particle cloud to fit within a box of size `target_size`."""
     vertices = []

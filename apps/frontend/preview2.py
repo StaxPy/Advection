@@ -1,9 +1,9 @@
 from frontend.rendering.object_3d import *
 from frontend.rendering.camera import *
 from frontend.rendering.projection import *
+from shared.variables import *
 import frontend.rendering.texture_data as td
 import frontend.rendering.particle as particle
-import shared.variables as sv
 import backend.file_processor as fp
 import pygame as pg
 import os
@@ -23,10 +23,13 @@ class PygameRender:
         self.clock = pg.time.Clock()
         pg.font.init()
 
+        self.InterFont = pg.font.SysFont('Inter', 15)
+
         td.load_textures()
         td.load_spritesheet_animations()
 
-        self.need_update = True
+        PygameSettings.texture = td.solo_textures['dust'] # Define the texture used of render (temporary)
+
 
         self.create_object()
 
@@ -34,6 +37,8 @@ class PygameRender:
         self.panning_active = False
         self.pan_last_mouse_pos = None
 
+        self.starting = True
+        
         ''' TESTS'''
 
         
@@ -72,20 +77,20 @@ class PygameRender:
 
         self.grid = Grid(self, 10, 1.0)
 
+
         # self.model = fp.get_object_from_file(self,'Testing_files/character_1.obj')
         # self.model = fp.get_object_from_file(self,'Testing_files/cube.obj')
-        self.test_texturedcloud = TexturedParticlesCloud(self, fp.create_DataParticlesCloud_from_file_demo('Testing_files/character_1.obj'), td.solo_textures['dust'])
+        PygameParticles.TexturedParticlesCloud= TexturedParticlesCloud(self, fp.create_DataParticlesCloud_from_obj_file('Testing_files/character_1.obj'), td.solo_textures['dust'])
 
-        self.texturedcloud = TexturedParticlesCloud(self, fp.create_DataParticlesCloud_from_obj_file('Testing_files/character_1.obj'), td.solo_textures['dust'])
-
-        self.cloudsize = self.texturedcloud.size
+        self.refresh_cloud_stats()
         # self.model.translate([1,1,1])
 
 
-        
+    def DataParticlesCloud_to_TexturedParticlesCloud(self, dataParticlesCloud):
+        """Converts a DataParticlesCloud instance to a TexturedParticlesCloud instance."""
+        return TexturedParticlesCloud(self, dataParticlesCloud, PygameSettings.texture)
 
-    def draw(self):
-        self.screen.fill(pg.Color('gray9'))
+    def draw_frame(self):
         # self.model.example_rotation()
 
         # self.model.rotate_y(pg.time.get_ticks() % 0.05)
@@ -94,7 +99,7 @@ class PygameRender:
         # self.model.draw()
         self.world_axes.draw()
         # self.test_texturedcloud.draw()
-        self.texturedcloud.draw()
+        PygameParticles.TexturedParticlesCloud.draw()
         # self.grid.draw()
         # self.axes.example_rotation()
         # self.axes.translate([0.002, 0.002, 0.002])
@@ -112,7 +117,12 @@ class PygameRender:
     #         pg.display.flip()
     #         self.clock.tick(self.FPS)
 
-
+    def refresh_cloud_stats(self):
+        self.cloud_size = tuple(float(x) for x in np.round(PygameParticles.TexturedParticlesCloud.size, 2))
+        self.cloud_size_display = self.InterFont.render(f'Size: {self.cloud_size}', True, (255, 255, 255))
+        
+        self.cloud_count = PygameParticles.TexturedParticlesCloud.count
+        self.cloud_count_display = self.InterFont.render(f'Count: {self.cloud_count}', True, (255, 255, 255))
     def loop(self):
         sv.pygame_width, sv.pygame_height = self.screen.get_size() 
 
@@ -124,77 +134,39 @@ class PygameRender:
         self.clock.tick()
         self.FPS = self.clock.get_fps()
 
+
         # Get the events (POSITION IS IMPORTANT, can conflict with tkinter otherwise)
         self.pg_events = pg.event.get() 
 
         self.inputs_and_events()
+        
         
 
         
 
         [exit() for i in self.pg_events if i.type == pg.QUIT]
 
-        if not self.need_update: # Only update render if input has been detected
-            return
-        
-
-        # for event in pg.event.get(pump=False):
-        #     if event.type == pg.MOUSEBUTTONDOWN:
-        #         if event.button == 3:  # Right mouse button
-        #             self.last_mouse_pos = event.pos
-        #         elif event.button == 2:  # Middle mouse button for pan
-        #             self.panning_active = True
-        #             self.pan_last_mouse_pos = event.pos
-        #             # pg.mouse.set_system_cursor(pg.SYSTEM_CURSOR_HAND)
-
-        #     if event.type == pg.MOUSEMOTION:
-        #         if self.last_mouse_pos:  # Rotate camera with left mouse
-        #             dx = event.pos[0] - self.last_mouse_pos[0]
-        #             dy = event.pos[1] - self.last_mouse_pos[1]
-        #             self.camera_angle_y += dx * 0.01  # Sensitivity for Y-axis rotation
-        #             self.camera_angle_x -= dy * 0.01  # Sensitivity for X-axis rotation
-        #             self.last_mouse_pos = event.pos
-        #         elif self.panning_active:  # Pan camera with middle mouse
-        #             dx = event.pos[0] - self.pan_last_mouse_pos[0]
-        #             dy = event.pos[1] - self.pan_last_mouse_pos[1]
-        #             self.pan_offset_x += dx  # Adjust pan offset for X direction
-        #             self.pan_offset_y += dy  # Adjust pan offset for Y direction
-                    
-        #             self.pan_last_mouse_pos = event.pos
-
-        #             print(self.pan_offset_x, self.pan_offset_y)
-
-        #     if event.type == pg.MOUSEBUTTONUP:
-        #         if event.button == 3:   # Right mouse button released
-        #             self.last_mouse_pos = None
-        #         elif event.button == 2:  # Middle mouse button released
-        #             self.panning_active = False
-        #             self.pan_last_mouse_pos = None
-
-        #     if event.type == pg.MOUSEWHEEL:
-        #         self.camera_distance -= event.y * 1  # Zoom control with mouse wheel
-        #         self.camera_distance = max(1, min(self.camera_distance, 10))
-
-        #     if event.type == pg.QUIT:
-        #         pg.quit()
-        
-        if sv.preview_boolean.get() == 1: # NOT WORKING ?
-            self.draw()
-
-        
-        font = pg.font.SysFont('Inter', 15)
-        # particles_global_amount_display = font.render(f'Particles: {len(sv.textured_particles)}', True, (255, 255, 255))
-        # self.screen.blit(particles_global_amount_display, (10, 10))
-        
-        size = tuple(float(x) for x in np.round(self.texturedcloud.size, 2))
-        particles_global_size_display = font.render(f'Size: {size}', True, (255, 255, 255))
-        self.screen.blit(particles_global_size_display, (10, 30))
-        fps_display = font.render(f'FPS: {round(self.FPS)}', True, (255, 255, 255))
-        self.screen.blit(fps_display, (10, 50))
+        # print(PygameSettings.toggle_change)
+        # if PygameTempData.input_detected : # Only update render if input has been detected
+        #     self.render_new_frame()
+        if PygameTempData.toggle_changed == True:
+            self.render_new_frame()
+            PygameTempData.toggle_changed = False
 
 
-        # Test texture blit
-        # self.screen.blit(self.test_particle.surface, (100,100)) # Show a single texture
+    def render_new_frame(self):
+        #TODO : Render only 1 frame then freezebefore first camera movement.
+
+        self.screen.fill(pg.Color('gray9'))
+
+        if PygameSettings.toggle.get() == 1:
+            self.draw_frame()
+
+        self.screen.blit(self.cloud_size_display, (10, 30))
+        self.screen.blit(self.cloud_count_display, (10, 50))
+        fps_display = self.InterFont.render(f'FPS: {round(self.FPS)}', True, (255, 255, 255))
+        self.screen.blit(fps_display, (10, 70))
+
 
         ''' TEST ANIMATION'''
         # current_time = pg.time.get_ticks()
@@ -214,14 +186,25 @@ class PygameRender:
         # pg.display.set_caption(str(self.clock.get_fps()))
         pg.display.flip()
 
+
         # self.clock.tick(self.FPS)
+
 
     def inputs_and_events(self):
 
 
+        if self.starting:
+            PygameTempData.toggle_changed = True
+        # if PygameTempData.next_frame_freeze:
+        #     PygameTempData.input_detected = False
+        #     PygameTempData.next_frame_freeze = False
+
         for event in self.pg_events:
+
             if event.type == pg.MOUSEBUTTONDOWN:
-                self.need_update = True
+                if self.starting:
+                    self.starting = False
+                PygameTempData.toggle_changed = True
                 if event.button == 3:  # Right mouse button
                     self.last_mouse_pos = event.pos
                 elif event.button == 2:  # Middle mouse button for pan
@@ -231,6 +214,7 @@ class PygameRender:
 
             if event.type == pg.MOUSEMOTION:
                 if self.last_mouse_pos:  # Rotate camera with left mouse
+                    PygameTempData.toggle_changed = True
                     dx = event.pos[0] - self.last_mouse_pos[0]
                     dy = event.pos[1] - self.last_mouse_pos[1]
 
@@ -240,6 +224,8 @@ class PygameRender:
 
                     self.last_mouse_pos = event.pos
                 elif self.panning_active:  # Pan camera with middle mouse
+                    PygameTempData.toggle_changed = True
+
                     input_lateral_motion = event.pos[0] - self.pan_last_mouse_pos[0]
                     input_vertical_motion = event.pos[1] - self.pan_last_mouse_pos[1]
                     self.camera.input_movement(input_lateral_motion, input_vertical_motion)
@@ -249,7 +235,9 @@ class PygameRender:
 
 
             if event.type == pg.MOUSEBUTTONUP:
-                self.need_update = False
+                if self.starting:
+                    self.starting = False
+                # PygameTempData.input_detected = False
                 if event.button == 3:   # Right mouse button released
                     self.last_mouse_pos = None
                 elif event.button == 2:  # Middle mouse button released
@@ -257,12 +245,11 @@ class PygameRender:
                     self.pan_last_mouse_pos = None
 
             if event.type == pg.MOUSEWHEEL:
-                self.need_update = True
+                # PygameTempData.input_detected = True
+                PygameTempData.toggle_changed = True
+                # PygameTempData.next_frame_freeze = True
                 zoom = event.y  # Zoom control with mouse wheel
                 self.camera.input_zoom(zoom)
         
 
 
-# if __name__ == '__main__':
-#     app = PygameRender()
-#     app.run()

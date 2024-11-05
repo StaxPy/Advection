@@ -3,8 +3,7 @@ import re
 from PIL import Image
 from PIL import ImageDraw
 import numpy as np
-import shared.variables as sv
-
+from shared.variables import *
 
 # Define paths for the OBJ file and the output MCFunction file
 INPUT_PATH = 'SimpleRig/animation'  # Change this to your OBJ files directory

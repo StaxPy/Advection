@@ -4,10 +4,10 @@ import CTkColorPicker
 from PIL import Image
 import os, random
 import threading
-import backend.file_operations as fo
+import backend.file_dialog as fd
 import backend.converter as converter
 import frontend.preview as preview
-import shared.variables as sv
+from shared.variables import *
 import multiprocessing as mp
 
 
@@ -191,8 +191,8 @@ def create_interface():
 
     """ 2 SEQUENCE """
     # ELEMENT PARAMETERS
-    sv.sequence_boolean = tk.IntVar(value=0)
-    sequence_checkbox = customtkinter.CTkCheckBox(sequence_frame,state="disabled",variable=sv.sequence_boolean,command=update_sequence_section, text="Sequence", onvalue=True, offvalue=False,**checkbox_style)
+    SequenceData.toggle = tk.IntVar(value=0)
+    sequence_checkbox = customtkinter.CTkCheckBox(sequence_frame,state="disabled",variable=SequenceData.toggle,command=update_sequence_section, text="Sequence", onvalue=True, offvalue=False,**checkbox_style)
     sequence_detected_label = customtkinter.CTkLabel(sequence_frame, text="Frames detected: ~",text_color=medium_gray,font=InterFont)
     sequence_start_Entry = customtkinter.CTkEntry(sequence_frame, **disabled_entry_style,textvariable=customtkinter.StringVar(value="start"),font=InterFont)
     sequence_end_Entry = customtkinter.CTkEntry(sequence_frame,**disabled_entry_style,textvariable=customtkinter.StringVar(value="end"),font=InterFont)
@@ -385,8 +385,8 @@ def create_interface():
 
 
 
-    # sv.sequence_boolean = tk.IntVar(value=0)
-    # sequence_checkbox = customtkinter.CTkCheckBox(input_frame,state="disabled",variable=sv.sequence_boolean,command=update_sequence_section, text="Sequence", onvalue=True, offvalue=False,checkbox_width=20,checkbox_height=20,text_color=white,border_color=white,border_width=1)
+    # SequenceData.toggle = tk.IntVar(value=0)
+    # sequence_checkbox = customtkinter.CTkCheckBox(input_frame,state="disabled",variable=SequenceData.toggle,command=update_sequence_section, text="Sequence", onvalue=True, offvalue=False,checkbox_width=20,checkbox_height=20,text_color=white,border_color=white,border_width=1)
     # sequence_checkbox.grid(column=1, row=2, padx=0, pady=0)
     # sequence_start_Entry = customtkinter.CTkEntry(input_frame, **disabled_entry_style,textvariable=customtkinter.StringVar(value="start"))
     # sequence_start_Entry.grid(column=2, row=2, padx=0, pady=0)
@@ -450,24 +450,24 @@ def create_interface():
 
 def find_input_dialog():
     global preview_framenumber
-    initial_directory = fo.get_json_memory("input_path") # Retrive the last path from the JSON file
+    initial_directory = fd.get_json_memory("input_path") # Retrive the last path from the JSON file
     dialog_result = tk.filedialog.askopenfilename(initialdir=initial_directory) # Ask for a file
     if dialog_result == "":
         print("User exited file dialog without selecting a file")
         return
-    sv.input_path = dialog_result
-    fo.update_json_memory("input_path",os.path.dirname(sv.input_path)) # Update the JSON file
+    InputData.path = dialog_result
+    fd.update_json_memory("input_path",os.path.dirname(InputData.path)) # Update the JSON file
     
-    input_path_entry.cget("textvariable").set(sv.input_path)
+    input_path_entry.cget("textvariable").set(InputData.path)
 
-    fo.find_file_sequence(sv.input_path) # Search for frames
+    fd.find_file_sequence(InputData.path) # Search for frames
 
     # Update the sequence section
-    sequence_start_Entry.cget("textvariable").set(str(sv.first_frame))
-    sequence_end_Entry.cget("textvariable").set(str(sv.last_frame))
-    sequence_detected_label.configure(text = "Frames detected: " + str(sv.last_frame-sv.first_frame+1))
+    sequence_start_Entry.cget("textvariable").set(str(InputData.first_frame))
+    sequence_end_Entry.cget("textvariable").set(str(InputData.last_frame))
+    sequence_detected_label.configure(text = "Frames detected: " + str(InputData.last_frame-InputData.first_frame+1))
 
-    if sv.first_frame == sv.last_frame: # If the sequence is 1 frame long
+    if InputData.first_frame == InputData.last_frame: # If the sequence is 1 frame long
         sequence_detected_label.configure(text_color='#9c9c9c')
         sequence_checkbox.configure(state="disabled") # Disable the checkbox (no more frames to select)
         if sequence_checkbox.get() == 1:
@@ -479,10 +479,10 @@ def find_input_dialog():
             sequence_checkbox.toggle()
 
     # Change the preview to the first_frame 
-    preview_framenumber.set(sv.first_frame)
+    preview_framenumber.set(InputData.first_frame)
 
-    preview_framenumber_slider.configure(from_=sv.first_frame,to=sv.last_frame, number_of_steps=sv.last_frame-1)
-    preview_framenumber_label.configure(text = str(sv.first_frame))
+    preview_framenumber_slider.configure(from_=InputData.first_frame,to=InputData.last_frame, number_of_steps=InputData.last_frame-1)
+    preview_framenumber_label.configure(text = str(InputData.first_frame))
 
     refresh_preview()
 
@@ -491,14 +491,14 @@ def export ():
 
     
 def find_output_dialog():
-    initial_directory = fo.get_json_memory("output_path")
+    initial_directory = fd.get_json_memory("output_path")
     dialog_result = tk.filedialog.askdirectory(initialdir=initial_directory)
     if dialog_result == "":
         print("User exited file dialog without selecting a folder")
         return
     
     sv.output_path = dialog_result
-    fo.update_json_memory("output_path",sv.output_path)
+    fd.update_json_memory("output_path",sv.output_path)
 
     output_path_entry.cget("textvariable").set(sv.output_path)
 
@@ -587,7 +587,7 @@ def random_cube_refresh_preview():
 
 def refresh_preview():
     print("refresh_preview")
-    if len(sv.sequence_files) == 0: # Stops if no sequence is found.
+    if len(InputData.sequence_files) == 0: # Stops if no sequence is found.
         return
     sv.loading_done = False
 
@@ -598,14 +598,14 @@ def refresh_preview():
 
 
 
-    path = sv.input_path
+    path = InputData.path
 
     if sequence_checkbox.get() == 1:
-        path = sv.sequence_files[int(preview_framenumber.get())]["path"] # Change the file path to the selected frame
+        path = InputData.sequence_files[int(preview_framenumber.get())]["path"] # Change the file path to the selected frame
         
     
     # Read particle positions from file
-    if sv.input_path:
+    if InputData.path:
         sv.data_particles =converter.create_ParticleData_list_from_file(path) # Read the ParticleData from the file
         sv.textured_particles = [] # Empty the particles list
         for particle in sv.data_particles[0]: # Transform the data into a list of textures particles
@@ -681,22 +681,22 @@ def launch_converter():
         tk.messagebox.showerror("Output folder required", "Please select an output folder",icon="info")
         return
     
-    if sv.sequence_boolean.get() == 0: # If we are not in sequence mode
-        if sv.input_path != "": # If an input was selected
-            sv.data_particles, sv.global_size = converter.create_ParticleData_list_from_file(sv.input_path)
+    if SequenceData.toggle.get() == 0: # If we are not in sequence mode
+        if InputData.path != "": # If an input was selected
+            sv.data_particles, sv.global_size = converter.create_ParticleData_list_from_file(InputData.path)
         else : # If no input was selected
-            sv.input_path = "particles" 
-        converter.write_mc_function(False,0,sv.output_path,os.path.splitext(os.path.basename(sv.input_path))[0],sv.data_particles)
+            InputData.path = "particles" 
+        converter.write_mc_function(False,0,sv.output_path,os.path.splitext(os.path.basename(InputData.path))[0],sv.data_particles)
 
     if sequence_checkbox.get() == 1: # If we are in sequence mode
-        if sv.input_path == "":
+        if InputData.path == "":
             tk.messagebox.showerror("Input required", "Please select an input for a sequence export",icon="info")
-        if sv.seq_length == 1:
+        if InputData.seq_length == 1:
             tk.messagebox.showerror("Single file", "Only one file was found in the sequence, exporting anyways. \n Make sure your files have the same name + number",icon="info")
         
         for i in range(int(sequence_start_Entry.get()), int(sequence_end_Entry.get())+1):
-            path = sv.sequence_files[i]["path"]
-            sv.data_particles, sv.global_size = converter.create_ParticleData_list_from_file(sv.sequence_files[i]["path"]) 
+            path = InputData.sequence_files[i]["path"]
+            sv.data_particles, sv.global_size = converter.create_ParticleData_list_from_file(InputData.sequence_files[i]["path"]) 
             converter.write_mc_function(True,i,sv.output_path,os.path.splitext(os.path.basename(path))[0],sv.data_particles)
 
     
