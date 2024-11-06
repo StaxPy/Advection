@@ -5,27 +5,9 @@ import frontend.rendering.texture_data as td
 
 
 
-class TexturedParticle():
-    def __init__(self, texture, position=(0,0,0), color=None, size = None):
-        self.position = position
-        if size is None:
-            size = texture.get_size()
-        else :
-            size = (size, size)
-            texture = pg.transform.scale(texture, size)
-        self.rect = texture.get_rect()
-        if color is not None:
-            self.surface = pg.Surface(size).convert_alpha().premul_alpha_ip() # Create an empty RGBA image with the same size as the texture
-            self.surface.fill(color) # Fill it with the desired color
-            self.surface.blit(texture, (0,0), special_flags=pg.BLEND_RGBA_MULT)
-        else:
-            self.surface = texture
+
     
-class DataParticle():
-    def __init__(self, position=(0,0,0), color=None, size = None):
-        self.position = position
-        self.color = color
-        self.size = size
+
 
 
 

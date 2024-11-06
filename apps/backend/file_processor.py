@@ -1,33 +1,11 @@
-from frontend.rendering.object_3d import *
-import frontend.rendering.texture_data as td
-import frontend.rendering.particle as particle
+from backend.data_particle import *
+from shared.variables import *
+from frontend.rendering.matrix_functions import *
 import random
 import os
 from PIL import Image
+import multiprocessing
 
-def get_object_from_file(self, filename):
-        """
-        Read an OBJ file and return an Object3D instance.
-
-        Parameters
-        ----------
-        filename : str
-            Path to the OBJ file.
-
-        Returns
-        -------
-        Object3D
-            The object created from the OBJ file.
-        """
-        vertex, faces = [], []
-        with open(filename) as f:
-            for line in f:
-                if line.startswith('v '):
-                    vertex.append([float(i) for i in line.split()[1:]] + [1])
-                elif line.startswith('f'):
-                    faces_ = line.split()[1:]
-                    faces.append([int(face_.split('/')[0]) - 1 for face_ in faces_])
-        return Object3D(self, vertex, faces)
 
 
 def create_DataParticlesCloud_from_file_demo(filename) -> DataParticlesCloud:
@@ -55,7 +33,7 @@ def create_DataParticlesCloud_from_file_demo(filename) -> DataParticlesCloud:
                 x, y, z, w = [float(i) for i in line.split()[1:]] + [1]
                 min_x, min_y, min_z = min(min_x, x), min(min_y, y), min(min_z, z)
                 max_x, max_y, max_z = max(max_x, x), max(max_y, y), max(max_z, z)
-                DataParticlesList.append(particle.DataParticle(position=(x, y, z, w),color=(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255), 255)))
+                DataParticlesList.append(DataParticle(position=(x, y, z, w),color=(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255), 255)))
 
     return DataParticlesCloud(DataParticlesList, (min_x, min_y, min_z), (max_x, max_y, max_z))
 
@@ -195,7 +173,7 @@ def create_DataParticlesCloud_from_obj_file(obj_file_path, resize=False, resize_
         if a < 128:  # 50% of 255 is 127.5, so we round up to 128
             continue
         # Append the particle to the list
-        dataParticlesList.append(particle.DataParticle(face_center, (r, g, b, a)))
+        dataParticlesList.append(DataParticle(face_center, (r, g, b, a)))
         # OLD WAY WITH A TEXTURE
         # # Append the particle to the list
         # particle_list.append(Preview.TexturedParticle(face_center, particle_texture, (r, g, b)))
@@ -259,3 +237,58 @@ def sample_color_from_texture(texcoord, img):
     y = max(0, min(y, height - 1))
 
     return img.getpixel((x, y))  # Return color including alpha
+
+
+
+# def write_mcfunction_file(mcfunction_file_path, vertices, texture_coords, faces, materials, textures, size=0.5, deltax=0, deltay=0, deltaz=0, speed=0, count=1):
+def write_mcfunction_file(input_file_path, output_path, output_name, coordinate_axis):
+
+    """Writes the particle commands to an MCFunction file using colors from the face centers."""
+    DataParticlesCloud =create_DataParticlesCloud_from_file(input_file_path)
+
+    os.makedirs(output_path, exist_ok=True) # Create the output directory if it doesn't exist
+    mcfunction_file_path = os.path.join(output_path, f"{output_name}.mcfunction")
+
+    deltax = 0
+    deltay = 0
+    deltaz = 0
+    speed = 0
+    count = 1
+
+    positions = coordinate_axis_rotate(DataParticlesCloud.particle_positions,coordinate_axis)
+
+    commands = []
+    for index, particle in enumerate(DataParticlesCloud.DataParticlesList):
+        # Format the particle command with fixed decimal positions
+        x, y, z, _ = positions[index]
+        r, g, b, a = particle.color
+        commands.append(
+            f"particle dust{{color:[{r/255},{g/255},{b/255}],scale:{ParticleData.size}}} "
+            f"~{x:.5f} ~{y:.5f} ~{z:.5f} {deltax} {deltay} {deltaz} {speed} {count} {ParticleData.viewmode}"
+        )
+
+
+    with open(mcfunction_file_path, 'w') as mcfunction_file:
+        mcfunction_file.write('\n'.join(commands))
+
+    print(f"MCFunction file '{mcfunction_file_path}' created successfully.")
+
+def write_mcfunction_file_wrapper(args):
+    write_mcfunction_file(*args)
+
+def write_mcfunction_sequence():
+    sequence_files = InputData.sequence_files
+    output_path = OutputData.path
+    start = int(SequenceData.start.get())
+    end = int(SequenceData.end.get())
+    args_list = []
+    
+    for i in range(start, end+1):
+        input_file_path = sequence_files[i]['path']
+        output_name = str(i)
+        args_list.append((input_file_path,output_path,output_name,AlignmentData.coordinate_axis.get()))
+        # fp.write_mcfunction_file(input_file_path,OutputData.path,output_name)
+
+    with multiprocessing.Pool() as pool:
+        # Map the write_mcfunction_file_wrapper function to the arguments
+        pool.map(write_mcfunction_file_wrapper, args_list)

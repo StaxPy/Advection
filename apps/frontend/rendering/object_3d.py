@@ -1,10 +1,7 @@
 import pygame as pg
 from frontend.rendering.matrix_functions import *
-from frontend.rendering.particle import *
 from shared.variables import *
 from numba import njit
-
-
 
 @njit(fastmath=True)
 def any_func(arr, a, b):
@@ -13,68 +10,6 @@ def any_func(arr, a, b):
 @njit(fastmath=True)
 def inside_screen(vertex):
     return np.all((vertex[:3] > -1.5) & (vertex[:3] < 1.5))
-
-
-
-class TexturedParticlesCloud:
-    def __init__(self, render, DataParticlesCloud, texture):
-        self.render = render
-        self.TexturedParticlesList = [(TexturedParticle(texture, DataParticle.position, DataParticle.color, DataParticle.size)) for DataParticle in DataParticlesCloud.DataParticlesList]
-        self.particle_positions = DataParticlesCloud.particle_positions
-        self.min_pos = DataParticlesCloud.min_pos
-        self.max_pos = DataParticlesCloud.max_pos
-        self.center = DataParticlesCloud.center
-        self.size = DataParticlesCloud.size
-        self.count = DataParticlesCloud.count
-        
-    def draw(self):
-        positions = self.particle_positions @ rotate_y(AlignmentData.coordinate_axis_y[AlignmentData.coordinate_axis.get()]) # TEST 
-        positions = positions @ rotate_x(AlignmentData.coordinate_axis_z[AlignmentData.coordinate_axis.get()]) # TEST 
-        positions =positions @ self.render.camera.camera_matrix() # Apply camera matrix
-        depths = np.array([position[2] for position in positions], dtype=np.float64)
-        positions = positions @ self.render.projection.projection_matrix # Project on -1, 1 plane
-        positions /= positions[:, -1].reshape(-1, 1) # Normalize
-
-        # MASK CLIPPING METHOD
-        visibility = np.array([(v[-2] >= self.render.camera.near_plane) and \
-                                (v[-2] <= self.render.camera.far_plane) and \
-                                (inside_screen(v)) for v in positions], dtype=bool)
-        
-        positions = positions @ self.render.projection.to_screen_matrix # Scale to screen size
-        positions = positions[:, :2] # Only keep x and y
-
-        sorted_indices = np.argsort(-depths)
-        sorted_particles = [self.TexturedParticlesList[i] for i in sorted_indices]
-        sorted_positions = positions[sorted_indices]
-        sorted_visibility = visibility[sorted_indices]
-        sorted_depths = depths[sorted_indices]
-
-        blits_sequence = []
-        for index, particle in enumerate(sorted_particles):
-            if sorted_visibility[index]:
-                scale = 10 / sorted_depths[index] #TODO: find correct scaling value
-                if scale <= 0.1 :
-                    scale = 0.1
-                scaled_particle = pg.transform.scale_by(particle.surface, scale)
-                position = np.add(sorted_positions[index], -scale / 2)
-                # self.render.screen.blit(scaled_particle, position)
-                blits_sequence.append((scaled_particle, position))
-
-        self.render.screen.fblits(blits_sequence)
-                
-
-
-
-class DataParticlesCloud:
-    def __init__(self, DataParticlesList, min_pos, max_pos):
-        self.DataParticlesList = DataParticlesList
-        self.count = len(DataParticlesList)
-        self.particle_positions = np.array([particle.position for particle in self.DataParticlesList], dtype=np.float64)
-        self.min_pos = min_pos
-        self.max_pos = max_pos
-        self.center = np.add(self.max_pos, self.min_pos)
-        self.size = np.subtract(self.max_pos, self.min_pos)
-
 
 
 class Object3D:

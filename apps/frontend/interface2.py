@@ -8,7 +8,7 @@ import frontend.preview2 as preview
 from shared.variables import *
 from PIL import Image
 import frontend.color_operations as co
-import threading
+
 
 class Styles():
     hover_color = "#ffffff"
@@ -123,14 +123,14 @@ class UI():
  
 
             if SequenceData.toggle.get() == 1:
-                path = InputData.sequence_files[int(PygameSettings.frame.get())]["path"] # Change the file path to the selected frame
+                path = InputData.sequence_files[int(PygameData.frame.get())]["path"] # Change the file path to the selected frame
                 
 
             # Read particle positions from file
             if InputData.path:
-                PygameParticles.DataParticlesCloud = fp.create_DataParticlesCloud_from_file(path) #TODO: add resize
-                PygameParticles.TexturedParticlesCloud = PygameSettings.PygameRenderer.DataParticlesCloud_to_TexturedParticlesCloud(PygameParticles.DataParticlesCloud)
-                PygameSettings.PygameRenderer.refresh_cloud_stats()
+                PygameParticles.DataParticlesCloud = fp.create_DataParticlesCloud_from_file(path) 
+                PygameParticles.TexturedParticlesCloud = PygameData.PygameRenderer.DataParticlesCloud_to_TexturedParticlesCloud(PygameParticles.DataParticlesCloud)
+                PygameData.PygameRenderer.refresh_cloud_stats()
                 preview.need_update = True
             
             else:
@@ -201,7 +201,7 @@ class UI():
         def update_preview_frame_section():
             print("update_preview_frame_section")
             # Change the preview to the first_frame 
-            PygameSettings.frame.set(InputData.first_frame)
+            PygameData.frame.set(InputData.first_frame)
             UI.preview_frame_slider.configure(from_=InputData.first_frame,to=InputData.last_frame, number_of_steps=InputData.last_frame-1)
             
             UI.slider_update_preview_frame_label(InputData.first_frame)
@@ -232,7 +232,7 @@ class UI():
             UI.particle_hexcode_entry.cget("textvariable").set(color)
 
         def slider_update_preview_frame(frame):
-            PygameSettings.frame.set(frame)
+            PygameData.frame.set(frame)
             UI.refresh_preview()
 
         def slider_update_preview_frame_label(frame):
@@ -249,7 +249,7 @@ class UI():
                 UI.TkApp.after(16,UI.highlight_frame_loop,frame)
             else:
                 UI.highlight_progress = 0
-
+            
         def export ():
             print("Export")
 
@@ -260,6 +260,16 @@ class UI():
             
             if OutputData.path == None:
                 UI.highlight_frame_loop(UI.export_frame)
+                return
+            if SequenceData.toggle.get() == 0:
+                fp.write_mcfunction_file(InputData.path,OutputData.path,os.path.splitext(os.path.basename(InputData.path))[0].lower(),AlignmentData.coordinate_axis.get())
+            else:
+                if InputData.seq_length <= 1:
+                    tk.messagebox.showerror("Single file", "Only one file was found in the sequence, exporting anyways. \n Make sure your files have the same name + number",icon="info")
+                
+                fp.write_mcfunction_sequence()
+                    
+
         """ END OF FUNCTION DEFINITIONS """
 
 
@@ -574,20 +584,12 @@ class UI():
 
 
 
-
-
-        launch_frame = customtkinter.CTkFrame(config_frame, width=200, height=200, corner_radius=10, fg_color="transparent")
-        # launch_frame.pack(side=tk.TOP, expand=True)
-        launch_button = customtkinter.CTkButton(launch_frame, text = 'Convert to .mcfunction file(s)',  command = None,fg_color='#7a7a7a',hover_color=Styles.hover_color,text_color=Styles.white)
-        # launch_button.pack(side=tk.RIGHT, expand=True)
-
-
         preview_frame_label = customtkinter.CTkLabel(preview_frame, text = 'frame',text_color=Styles.medium_gray,bg_color=Styles.almost_black,width=100)
         preview_frame_label.pack(side=tk.BOTTOM, expand=False, padx=0, pady=0,)
 
-        PygameSettings.frame = customtkinter.IntVar(value=0)
+        PygameData.frame = customtkinter.IntVar(value=0)
         preview_frame_slider_debouncer = Debouncer(TkApp, 500, slider_update_preview_frame_label, slider_update_preview_frame)
-        preview_frame_slider = customtkinter.CTkSlider(preview_frame,from_=0, to=100,number_of_steps=10,variable=PygameSettings.frame,**Styles.disabled_slider_style,command=preview_frame_slider_debouncer.debouncer)
+        preview_frame_slider = customtkinter.CTkSlider(preview_frame,from_=0, to=100,number_of_steps=10,variable=PygameData.frame,**Styles.disabled_slider_style,command=preview_frame_slider_debouncer.debouncer)
         preview_frame_slider.pack(side=tk.BOTTOM, expand=False, padx=0, pady=0)
 
 
@@ -599,11 +601,11 @@ class UI():
         # preview_button = customtkinter.CTkButton(pygame_frame, text = 'preview',  command = refresh_preview,bg_color='black',fg_color='#7a7a7a',hover_color=Styles.hover_color,text_color=Styles.white)
         # preview_button.pack(side=tk.TOP, expand=False, padx=50, pady=10)
 
-        PygameSettings.toggle = tk.IntVar(value=sv.preview_boolean)
+        PygameData.toggle = tk.IntVar(value=sv.preview_boolean)
         def toggle_preview():
             PygameTempData.toggle_changed = True
 
-        preview_toggle_checkbox = customtkinter.CTkCheckBox(preview_frame,text="Preview",text_color=Styles.white,command=toggle_preview, variable=PygameSettings.toggle,onvalue=True, offvalue=False,checkbox_width=20,checkbox_height=20,fg_color=Styles.light_gray,hover_color=Styles.hover_color,bg_color=Styles.almost_black,border_color=Styles.white,border_width=1)
+        preview_toggle_checkbox = customtkinter.CTkCheckBox(preview_frame,text="Preview",text_color=Styles.white,command=toggle_preview, variable=PygameData.toggle,onvalue=True, offvalue=False,checkbox_width=20,checkbox_height=20,fg_color=Styles.light_gray,hover_color=Styles.hover_color,bg_color=Styles.almost_black,border_color=Styles.white,border_width=1)
         preview_toggle_checkbox.pack(side=tk.RIGHT, expand=False, padx=0, pady=0)
 
 

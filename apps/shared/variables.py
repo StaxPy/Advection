@@ -34,7 +34,7 @@ class sv():
     almost_black = "#181818"
 
 
-class PygameSettings():
+class PygameData():
     PygameRenderer = None
     frame = 0
     texture = None
@@ -64,8 +64,12 @@ class SequenceData():
 
 class AlignmentData():
     coordinate_axis  = None
-    coordinate_axis_y = {"X-Y": 0, "Y-Z": math.pi/2, "Z-X": 0}
-    coordinate_axis_z = {"X-Y": 0, "Y-Z": 0, "Z-X": math.pi/2}
+    coordinate_axis_y = {"X-Y": 0, "Y-Z": math.pi/2, "Z-X": math.pi}
+    coordinate_axis_x = {"X-Y": 0, "Y-Z": 0, "Z-X": math.pi/2}
+
+class ParticleData():
+    size = 1
+    viewmode = "force"
 
 class OutputData():
     path = None

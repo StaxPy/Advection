@@ -2,12 +2,11 @@ from frontend.rendering.object_3d import *
 from frontend.rendering.camera import *
 from frontend.rendering.projection import *
 from shared.variables import *
+from frontend.textured_particle import *
 import frontend.rendering.texture_data as td
-import frontend.rendering.particle as particle
 import backend.file_processor as fp
 import pygame as pg
 import os
-
 
 class PygameRender:
     def __init__(self,WIDTH, HEIGHT, frame):
@@ -28,7 +27,7 @@ class PygameRender:
         td.load_textures()
         td.load_spritesheet_animations()
 
-        PygameSettings.texture = td.solo_textures['dust'] # Define the texture used of render (temporary)
+        PygameData.texture = td.solo_textures['dust'] # Define the texture used of render (temporary)
 
 
         self.create_object()
@@ -88,7 +87,7 @@ class PygameRender:
 
     def DataParticlesCloud_to_TexturedParticlesCloud(self, dataParticlesCloud):
         """Converts a DataParticlesCloud instance to a TexturedParticlesCloud instance."""
-        return TexturedParticlesCloud(self, dataParticlesCloud, PygameSettings.texture)
+        return TexturedParticlesCloud(self, dataParticlesCloud, PygameData.texture)
 
     def draw_frame(self):
         # self.model.example_rotation()
@@ -159,7 +158,7 @@ class PygameRender:
 
         self.screen.fill(pg.Color('gray9'))
 
-        if PygameSettings.toggle.get() == 1:
+        if PygameData.toggle.get() == 1:
             self.draw_frame()
 
         self.screen.blit(self.cloud_size_display, (10, 30))
