@@ -26,7 +26,6 @@ def find_file_sequence(input_path):
     InputData.seq_length = 0
     InputData.first_frame = 1
     InputData.last_frame = 1
-    InputData.extension = os.path.splitext(input_path)[1] # Get the extension of the input file
     InputData.folder = os.path.dirname(input_path) # Get the parent directory of this file
     InputData.name = re.sub(r'\d+$', '', os.path.splitext(os.path.basename(input_path))[0]) # Get the name of the input file without the number at the end
     

@@ -1,10 +1,11 @@
 from backend.data_particle import *
 from shared.variables import *
-from frontend.rendering.matrix_functions import *
+# from frontend.rendering.matrix_functions import *
+from backend.modifiers import *
 import random
 import os
 from PIL import Image
-import multiprocessing
+import time
 
 
 
@@ -38,18 +39,44 @@ def create_DataParticlesCloud_from_file_demo(filename) -> DataParticlesCloud:
     return DataParticlesCloud(DataParticlesList, (min_x, min_y, min_z), (max_x, max_y, max_z))
 
 
-def create_DataParticlesCloud_from_file(file_path, resize=False, resize_dimensions=(1.0, 1.0, 1.0)):
+def create_random_DataParticles(count: int):
+    DataParticlesList = []
+    min_x, min_y, min_z, max_x, max_y, max_z = 0, 0, 0, 0, 0, 0
+    for _ in range(count):
+        x = random.uniform(0, 1)
+        y = random.uniform(0, 1)
+        z = random.uniform(0, 1)
+        r = random.randint(0, 255)
+        g = random.randint(0, 255)
+        b = random.randint(0, 255)
+        min_x, min_y, min_z = min(min_x, x), min(min_y, y), min(min_z, z)
+        max_x, max_y, max_z = max(max_x, x), max(max_y, y), max(max_z, z)
+        DataParticlesList.append(DataParticle(position=(x, y, z, 1), color=(r, g, b)))
+    return DataParticlesCloud(DataParticlesList, (min_x, min_y, min_z), (max_x, max_y, max_z))
+
+
+def create_cube_DataParticles():
+    DataParticlesList = []
+    vertices = [(0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1),
+                (1, 0, 0), (1, 0, 1), (1, 1, 0), (1, 1, 1)]
+    for x, y, z in vertices:
+        DataParticlesList.append(DataParticle(position=(x, y, z, 1), color=(255, 255, 255)))
+    return DataParticlesCloud(DataParticlesList, (0, 0, 0), (1, 1, 1))
+
+
+def create_DataParticlesCloud_from_file(file_path):
     print("create_DataParticlesCloud_from_file")
     
     if file_path.endswith('.obj'):
-        DataParticlesCloud = create_DataParticlesCloud_from_obj_file(file_path,resize,resize_dimensions)
-
+        DataParticlesCloud = create_DataParticlesCloud_from_obj_file(file_path)
+    if file_path.endswith('.png') or file_path.endswith('.jpg') or file_path.endswith('.jpeg'):
+        DataParticlesCloud = create_DataParticlesCloud_from_image(file_path)
 
     return DataParticlesCloud
 
 
 
-def create_DataParticlesCloud_from_obj_file(obj_file_path, resize=False, resize_dimensions=(1.0, 1.0, 1.0)):
+def create_DataParticlesCloud_from_obj_file(obj_file_path):
     print("create_DataParticlesCloud_from_obj_file")
     """Reads an OBJ file and extracts vertex positions, texture coordinates, faces, and materials.
        If `normalize=True`, scales the particle cloud to fit within a box of size `target_size`."""
@@ -123,32 +150,12 @@ def create_DataParticlesCloud_from_obj_file(obj_file_path, resize=False, resize_
     range_y = max_y - min_y
     range_z = max_z - min_z
 
-    if resize:
-
-
-
-        # Scale factor to fit the particle cloud into the target size
-        x_scale_factor = resize_dimensions[0] / range_x
-        y_scale_factor = resize_dimensions[1] / range_y
-        z_scale_factor = resize_dimensions[2] / range_z
-
-        # Normalize vertices to fit within a box of size target_size
-        resized_vertices = [
-            (
-                (v[0] - min_x) * x_scale_factor,  # Normalize x
-                (v[1] - min_y) * y_scale_factor,  # Normalize y
-                (v[2] - min_z) * z_scale_factor   # Normalize z
-            )
-            for v in vertices
-        ]
-    else:
-        resized_vertices = vertices
 
     # Store particle positions and colors from the mesh data
     dataParticlesList = []
     for face, material in zip(faces, materials):
         # Calculate the geometric center of the face
-        face_center = calculate_face_center(resized_vertices, face)
+        face_center = calculate_face_center(vertices, face)
 
         # Use fixed decimal formatting (5 decimal places)
         face_center = tuple(round(coord, 5) for coord in face_center)+ (1,)
@@ -241,7 +248,7 @@ def sample_color_from_texture(texcoord, img):
 
 
 # def write_mcfunction_file(mcfunction_file_path, vertices, texture_coords, faces, materials, textures, size=0.5, deltax=0, deltay=0, deltaz=0, speed=0, count=1):
-def write_mcfunction_file(input_file_path, output_path, output_name, coordinate_axis):
+def write_mcfunction_file(input_file_path, output_path, output_name,modifiers):
 
     """Writes the particle commands to an MCFunction file using colors from the face centers."""
     DataParticlesCloud =create_DataParticlesCloud_from_file(input_file_path)
@@ -255,7 +262,7 @@ def write_mcfunction_file(input_file_path, output_path, output_name, coordinate_
     speed = 0
     count = 1
 
-    positions = coordinate_axis_rotate(DataParticlesCloud.particle_positions,coordinate_axis)
+    positions = apply_alignment_modifiers(DataParticlesCloud.particle_positions, modifiers)
 
     commands = []
     for index, particle in enumerate(DataParticlesCloud.DataParticlesList):
@@ -263,7 +270,7 @@ def write_mcfunction_file(input_file_path, output_path, output_name, coordinate_
         x, y, z, _ = positions[index]
         r, g, b, a = particle.color
         commands.append(
-            f"particle dust{{color:[{r/255},{g/255},{b/255}],scale:{ParticleData.size}}} "
+            f"particle dust{{color:[{r/255},{g/255},{b/255}],scale:{float(ParticleData.size.get())}}} "
             f"~{x:.5f} ~{y:.5f} ~{z:.5f} {deltax} {deltay} {deltaz} {speed} {count} {ParticleData.viewmode}"
         )
 
@@ -271,24 +278,53 @@ def write_mcfunction_file(input_file_path, output_path, output_name, coordinate_
     with open(mcfunction_file_path, 'w') as mcfunction_file:
         mcfunction_file.write('\n'.join(commands))
 
-    print(f"MCFunction file '{mcfunction_file_path}' created successfully.")
+    return f"MCFunction file '{mcfunction_file_path}' created successfully."
 
-def write_mcfunction_file_wrapper(args):
-    write_mcfunction_file(*args)
 
-def write_mcfunction_sequence():
-    sequence_files = InputData.sequence_files
-    output_path = OutputData.path
-    start = int(SequenceData.start.get())
-    end = int(SequenceData.end.get())
-    args_list = []
+
+def create_DataParticlesCloud_from_image(image_path, grid_resolution=200, threshold=240, final_width=10):
+    # Open the image and convert it to RGBA
+    img = Image.open(image_path).convert('RGBA')
     
-    for i in range(start, end+1):
-        input_file_path = sequence_files[i]['path']
-        output_name = str(i)
-        args_list.append((input_file_path,output_path,output_name,AlignmentData.coordinate_axis.get()))
-        # fp.write_mcfunction_file(input_file_path,OutputData.path,output_name)
+    width = grid_resolution
+    height = int((img.height / img.width) * grid_resolution)
+    # Normalize size by resizing the image to fit the grid resolution
+    img_resized = img.resize((grid_resolution, int((img.height / img.width) * grid_resolution)), Image.Resampling.BICUBIC)    
+    
+    # Create a list to store the grid of colored points (x, y, color)
+    dataParticlesList = []
+    
+    # Get pixel data from the resized image
+    pixels = np.array(img_resized)
+    min_x, min_y, min_z, max_x, max_y, max_z = 0, 0, 0, 0, 0, 0
+    # Loop through each grid cell and sample the color at the center
+    for i in range(width):
+        for j in range(height):
+            # Get the color of the pixel at (i, j)
+            color = pixels[j, i]
+            
+            # Ignore transparent pixels
+            if color[3] < threshold:
+                continue
+            
+            # Calculate the normalized (x, y) coordinates
+            # normalized_x = i/(max(width, height))
+            # normalized_y = j/(max(width, height))
+            normalized_x = i/width*final_width
+            normalized_y = j/width*-final_width
+            
+            min_x, min_y, min_z = min(min_x, normalized_x), min(min_y, normalized_y), min(min_z, 0)
+            max_x, max_y, max_z = max(max_x, normalized_x), max(max_y, normalized_y), max(max_z, 0)
 
-    with multiprocessing.Pool() as pool:
-        # Map the write_mcfunction_file_wrapper function to the arguments
-        pool.map(write_mcfunction_file_wrapper, args_list)
+            position = normalized_x, normalized_y, 0 , 1
+            # Add the position and color to the grid points
+            dataParticlesList.append(DataParticle(position, color))
+        # OLD WAY WITH A TEXTURE
+        # # Append the particle to the list
+        # particle_list.append(Preview.TexturedParticle(face_center, particle_texture, (r, g, b)))
+    # Return the particle list and the size (range) of the original particle cloud
+
+
+    return DataParticlesCloud(dataParticlesList, (min_x, min_y, min_z), (max_x, max_y, max_z))
+
+

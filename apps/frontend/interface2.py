@@ -1,39 +1,17 @@
 import tkinter as tk
 import customtkinter
 import CTkColorPicker
-import os, random
+import os
 import backend.file_dialog as fd
 import backend.file_processor as fp
+import backend.file_multi_processor as fmp
 import frontend.preview2 as preview
 from shared.variables import *
 from PIL import Image
 import frontend.color_operations as co
 
 
-class Styles():
-    hover_color = "#ffffff"
-    special_color = "#be5dff"
-    dark_gray = "#292929"
-    medium_gray = "#6e6e6e"
-    light_gray = "#adadad"
-    white = "#ffffff"
-    almost_black = sv.almost_black
-    black = "#000000"
 
-    # Path
-    path_style = {"state":"disabled","fg_color":black,"placeholder_text_color":medium_gray,"text_color":white,"border_color":dark_gray}
-    # Entry
-    disabled_entry_style = {"state":"disabled","fg_color":dark_gray,"placeholder_text_color":medium_gray,"text_color":medium_gray,"border_color":medium_gray}
-    normal_entry_style = {"state":"normal","fg_color":black,"placeholder_text_color":white,"border_color":dark_gray,"text_color":white}
-    # Checkbox
-    checkbox_style = {"checkbox_width":20,"checkbox_height":20,"text_color":white,"border_color":white,"border_width":1,"hover_color":hover_color,"fg_color":special_color}
-    # Menu
-    normal_menu_style = {"fg_color":black,"button_color":medium_gray,"dropdown_fg_color":dark_gray,"dropdown_text_color":white,"button_hover_color":hover_color} 
-    # Slider
-    disabled_slider_style = {"state":"disabled","bg_color":almost_black,"fg_color":medium_gray,'progress_color': medium_gray,"border_color":almost_black,"button_color":'#3a3a3a',"button_hover_color":'#3a3a3a'}
-    normal_slider_style = {"state":"normal","bg_color":almost_black,"fg_color":medium_gray,'progress_color': medium_gray,"border_color":almost_black,"button_color":hover_color,"button_hover_color":hover_color}
-
-    InterFont = ""
 
 
 
@@ -65,6 +43,7 @@ class UI():
         TkApp = customtkinter.CTk()
 
         Styles.InterFont = customtkinter.CTkFont(family="Inter", size=12)
+        Styles.InterFont_bold = customtkinter.CTkFont(family="Inter", size=12, weight="bold")
     
 
 
@@ -102,69 +81,78 @@ class UI():
         """ FUNCTIONS """
 
         def focus_on_click(event):
-            event.widget.focus_set() # Focus on selected element
+            if isinstance(event.widget, tk.Widget):
+                event.widget.focus_set()  # Focus on selected element
 
         def verify_particle_size_widget(event):
             print("Verifying",event.widget)
             # UI.TkApp.focus_set() # Unfocus
 
-        def refresh_preview():
-            print("refresh_preview")
-            # if len(InputData.sequence_files) == 0: # Stops if no sequence was found. > why??
-            #     return
-            sv.loading_done = False
-            # Start the loading animation in a separate thread
 
-            # loading_thread = threading.Thread(target=preview.loading_animation,daemon=True)
-            # loading_thread.start()
+        def request_pygame_update(value):
+            PygameTempData.update_requested = True
 
-
-            path = InputData.path
- 
-
-            if SequenceData.toggle.get() == 1:
-                path = InputData.sequence_files[int(PygameData.frame.get())]["path"] # Change the file path to the selected frame
-                
-
-            # Read particle positions from file
-            if InputData.path:
-                PygameParticles.DataParticlesCloud = fp.create_DataParticlesCloud_from_file(path) 
-                PygameParticles.TexturedParticlesCloud = PygameData.PygameRenderer.DataParticlesCloud_to_TexturedParticlesCloud(PygameParticles.DataParticlesCloud)
-                PygameData.PygameRenderer.refresh_cloud_stats()
-                preview.need_update = True
-            
-            else:
-                # Set loading_done to True to stop the loading animation
-                sv.loading_done = True
-                return
-            
-
-            
-            # Set loading_done to True to stop the loading animation
-            sv.loading_done = True
-
-            PygameTempData.toggle_changed = True
 
 
         def find_input_dialog():
             print("find_input_dialog")
             initial_directory = fd.get_json_memory("input_path") # Retrive the last path from the JSON file
-            dialog_result = tk.filedialog.askopenfilename(initialdir=initial_directory) # Ask for a file
+            dialog_result = tk.filedialog.askopenfilename(initialdir=initial_directory, filetypes=[("OBJ or Image Files","*.obj;*.png;*.jpg;*.jpeg")]) # Ask for a file
             if dialog_result == "":
                 print("User exited file dialog without selecting a file")
                 return
-            InputData.path = dialog_result
-            fd.update_json_memory("input_path",os.path.dirname(InputData.path)) # Update the JSON file
+            fd.update_json_memory("input_path",os.path.dirname(dialog_result)) # Update the JSON file
+
+            UI.update_input(dialog_result)
+
+        def update_input(input_path):
+            InputData.extension = os.path.splitext(input_path)[1] # Update the global input extension
+
+            # Update the global input mode
+            if InputData.extension == ".obj":
+                InputData.mode = "model"
+            elif InputData.extension == ".png" or InputData.extension == ".jpg" or InputData.extension == ".jpeg":
+                InputData.mode = "image"
+            else:
+                return # Return if the extension is not supported
             
-            UI.input_path_entry.cget("textvariable").set(InputData.path)
-            fd.find_file_sequence(InputData.path) # Search for frames
+            
+            InputData.path = input_path # Update the global input path
+            UI.input_path_entry.cget("textvariable").set(input_path) # Update the input path display
+            fd.find_file_sequence(input_path) # Search for frames
 
-            UI.update_sequence_section()
-            UI.update_preview_frame_section()
-            UI.toggle_sequence_section()
-            UI.refresh_preview()
+            # UI Update
 
 
+            UI.update_alignment_section() # Update the alignment section
+            UI.update_sequence_section() # Update the sequence section
+            UI.update_preview_frame_section() # Update the preview frame section
+
+            # Cloud Update
+            UI.update_particles_cloud() # Generate a new cloud
+            UI.update_model_resize() # Update the model resize
+
+
+        def update_particles_cloud():
+            print("refresh_preview")
+            path = InputData.path # Charge default path
+
+            if SequenceData.toggle.get() == 1: # If the sequence toggle is on
+                path = InputData.sequence_files[int(PygameData.frame.get())]["path"] # Change the path to the selected frame
+
+            if InputData.path: # If the path is not None
+                DataParticlesCloud = fp.create_DataParticlesCloud_from_file(path) # Create the DataParticlesCloud
+                if DataParticlesCloud is not None: # If the DataParticlesCloud is not None
+                    PygameParticles.DataParticlesCloud = fp.create_DataParticlesCloud_from_file(path) # Create the DataParticlesCloud
+                    PygameParticles.TexturedParticlesCloud = PygameData.PygameRenderer.DataParticlesCloud_to_TexturedParticlesCloud(PygameParticles.DataParticlesCloud) # Create the TexturedParticlesCloud
+                    PygameData.PygameRenderer.refresh_cloud_stats()
+                    PygameTempData.update_requested = True
+
+
+        def update_model_resize():
+            ResizeData.width.set(str(round(PygameParticles.DataParticlesCloud.size[0],4)))
+            ResizeData.height.set(str(round(PygameParticles.DataParticlesCloud.size[1],4)))
+            ResizeData.depth.set(str(round(PygameParticles.DataParticlesCloud.size[2],4)))
 
         def find_output_dialog():
             initial_directory = fd.get_json_memory("output_path")
@@ -179,7 +167,16 @@ class UI():
             UI.output_path_entry.cget("textvariable").set(OutputData.path)
         
         def update_sequence_section():
-            print("update_sequence_section")
+            """
+            Updates the UI components related to the sequence section based on the detected sequence of frames.
+
+            - Sets the start and end entries to the first and last frame numbers.
+            - Configures the detected label to show the number of frames detected.
+            - Disables the sequence checkbox if only one frame is found and adjusts the UI accordingly.
+            - Enables the sequence checkbox if more than one frame is found and ensures it is checked.
+            """
+            if sv.DEBUG: print("update_sequence_section")
+            
             # Update the sequence section
             UI.sequence_start_Entry.cget("textvariable").set(str(InputData.first_frame))
             UI.sequence_end_Entry.cget("textvariable").set(str(InputData.last_frame))
@@ -196,7 +193,24 @@ class UI():
                 UI.sequence_checkbox.configure(state="normal") # Make sequence uncheckable
                 if UI.sequence_checkbox.get() == False:
                     UI.sequence_checkbox.toggle() # Check the sequence and update the UI
+            
+            UI.toggle_sequence_section() # Toggle the sequence section
 
+        def update_alignment_section():
+            if InputData.mode == "model": # If the input mode is model
+                # Reset alignement to none
+                AlignmentData.horizontal_align.set('None')
+                AlignmentData.vertical_align.set('None')
+                
+                UI.horizontal_align_menu.configure(values=list(AlignmentData.model_horizontal_align_offset.keys()))
+                UI.vertical_align_menu.configure(values=list(AlignmentData.model_vertical_align_offset.keys()))
+            elif InputData.mode == "image": # If the input mode is image
+                # Reset alignement to none
+                AlignmentData.horizontal_align.set('Left')
+                AlignmentData.vertical_align.set('Bottom')
+                
+                UI.horizontal_align_menu.configure(values=list(AlignmentData.image_horizontal_align_offset.keys()))
+                UI.vertical_align_menu.configure(values=list(AlignmentData.image_vertical_align_offset.keys()))
 
         def update_preview_frame_section():
             print("update_preview_frame_section")
@@ -210,19 +224,46 @@ class UI():
 
         def toggle_sequence_section():
 
-            # If the checkbox was checked, 
+            
+            """
+            If the sequence checkbox is checked, this function will enable the start and end sequence entry fields and the sequence slider.
+            If the sequence checkbox is unchecked, this function will disable the start and end sequence entry fields and the sequence slider.
+            """
+            # If sequence is checked
             if UI.sequence_checkbox.get() == 1:
                 UI.sequence_start_Entry.configure(**Styles.normal_entry_style,placeholder_text="start")
                 UI.sequence_end_Entry.configure(**Styles.normal_entry_style,placeholder_text="end")
                 # preview_frame_slider.pack(side=tk.BOTTOM, expand=False, padx=50, pady=50)
                 UI.preview_frame_slider.configure(**Styles.normal_slider_style)
-
-
-            if UI.sequence_checkbox.get() == 0:
+            else:
                 UI.sequence_start_Entry.configure(**Styles.disabled_entry_style)
                 UI.sequence_end_Entry.configure(**Styles.disabled_entry_style)
                 # preview_frame_slider.pack_forget()
                 UI.preview_frame_slider.configure(**Styles.disabled_slider_style)
+
+
+        def toggle_model_resize_section():
+
+            if ResizeData.width.get() == '1.00000':
+                ResizeData.width.set(str(round(PygameParticles.DataParticlesCloud.size[0],4)))
+            if ResizeData.height.get() == '1.00000':
+                ResizeData.height.set(str(round(PygameParticles.DataParticlesCloud.size[1],4)))
+            if ResizeData.depth.get() == '1.00000':
+                ResizeData.depth.set(str(round(PygameParticles.DataParticlesCloud.size[2],4)))
+
+
+            # If ModelResize is checked
+            if ResizeData.toggle.get() == 1:
+                UI.model_width_entry.configure(**Styles.normal_entry_style)
+                UI.model_height_entry.configure(**Styles.normal_entry_style)
+                UI.model_depth_entry.configure(**Styles.normal_entry_style)
+            else:
+                UI.model_width_entry.configure(**Styles.disabled_entry_style)
+                UI.model_height_entry.configure(**Styles.disabled_entry_style)
+                UI.model_depth_entry.configure(**Styles.disabled_entry_style)
+
+            PygameTempData.update_requested = True
+
 
 
         def ask_color():
@@ -233,7 +274,7 @@ class UI():
 
         def slider_update_preview_frame(frame):
             PygameData.frame.set(frame)
-            UI.refresh_preview()
+            UI.update_particles_cloud()
 
         def slider_update_preview_frame_label(frame):
             UI.preview_frame_label.configure(text = str(int(frame)))
@@ -252,7 +293,8 @@ class UI():
             
         def export ():
             print("Export")
-
+            
+            
             if InputData.path == None:
                 UI.highlight_frame_loop(UI.input_frame)
                 # tk.messagebox.showerror("Output folder required", "Please select an output folder",icon="info")
@@ -262,12 +304,24 @@ class UI():
                 UI.highlight_frame_loop(UI.export_frame)
                 return
             if SequenceData.toggle.get() == 0:
-                fp.write_mcfunction_file(InputData.path,OutputData.path,os.path.splitext(os.path.basename(InputData.path))[0].lower(),AlignmentData.coordinate_axis.get())
+                result = fp.write_mcfunction_file(InputData.path,OutputData.path,os.path.splitext(os.path.basename(InputData.path))[0].lower(),Modifiers(PygameParticles.DataParticlesCloud.center,PygameParticles.DataParticlesCloud.size))
+                if sv.DEBUG == True:
+                    print(result)
             else:
                 if InputData.seq_length <= 1:
                     tk.messagebox.showerror("Single file", "Only one file was found in the sequence, exporting anyways. \n Make sure your files have the same name + number",icon="info")
                 
-                fp.write_mcfunction_sequence()
+                UI.export_button.configure(state="disabled")
+                # UI.TkApp.attributes('-disabled', True)
+                # UI.TkApp.state = "disabled"
+
+
+                # UI.TkApp.attributes("-alpha", 0.7)
+                multiprocessor = fmp.MultiProcessor_Progress(UI.TkApp,UI.export_button)
+                multiprocessor.grab_set()
+                multiprocessor.transient(UI.TkApp)
+                # multiprocessor.finished_event.bind(toggle_button)
+                # fp.write_mcfunction_sequence()
                     
 
         """ END OF FUNCTION DEFINITIONS """
@@ -385,15 +439,19 @@ class UI():
 
         """ 2 ALIGNMENT """
         # ELEMENT PARAMETERS
+        AlignmentData.coordinate_axis = customtkinter.StringVar(value=AlignmentData.coordinate_axis)
+        AlignmentData.rotate = customtkinter.StringVar(value=AlignmentData.rotate)
+        AlignmentData.horizontal_align = customtkinter.StringVar(value=AlignmentData.horizontal_align)
+        AlignmentData.vertical_align = customtkinter.StringVar(value=AlignmentData.vertical_align)
+
         coordinate_axis_label = customtkinter.CTkLabel(alignment_frame, text="Coordinate Axis",text_color=Styles.light_gray,font=Styles.InterFont)
-        AlignmentData.coordinate_axis = customtkinter.StringVar(value="X-Y")
-        coordinate_axis_menu = customtkinter.CTkOptionMenu(alignment_frame,dropdown_font=Styles.InterFont,values=["X-Y","Y-Z","Z-X"],variable=AlignmentData.coordinate_axis,**Styles.normal_menu_style)
+        coordinate_axis_menu = customtkinter.CTkOptionMenu(alignment_frame,command=request_pygame_update,dropdown_font=Styles.InterFont,values=list(AlignmentData.coordinate_axis_x.keys()),variable=AlignmentData.coordinate_axis,**Styles.normal_menu_style)
         rotation_label = customtkinter.CTkLabel(alignment_frame, text="Rotation",text_color=Styles.light_gray,font=Styles.InterFont)
-        rotation_menu = customtkinter.CTkOptionMenu(alignment_frame,dropdown_font=Styles.InterFont,values=["0°","90°","180°","270°"],**Styles.normal_menu_style)
+        rotation_menu = customtkinter.CTkOptionMenu(alignment_frame,command=request_pygame_update,dropdown_font=Styles.InterFont,values=list(AlignmentData.rotate_radians.keys()),variable=AlignmentData.rotate,**Styles.normal_menu_style)
         horizontal_align_label = customtkinter.CTkLabel(alignment_frame, text="Horizontal Align",text_color=Styles.light_gray,font=Styles.InterFont)
-        horizontal_align_menu = customtkinter.CTkOptionMenu(alignment_frame,dropdown_font=Styles.InterFont,values=["Left","Center","Right"],**Styles.normal_menu_style)
+        horizontal_align_menu = customtkinter.CTkOptionMenu(alignment_frame,command=request_pygame_update,dropdown_font=Styles.InterFont,values=list(AlignmentData.horizontal_align_offset.keys()),variable=AlignmentData.horizontal_align,**Styles.normal_menu_style)
         vertical_align_label = customtkinter.CTkLabel(alignment_frame, text="Vertical Align",text_color=Styles.light_gray,font=Styles.InterFont)
-        vertical_align_menu = customtkinter.CTkOptionMenu(alignment_frame,dropdown_font=Styles.InterFont,values=["Top","Center","Bottom"],**Styles.normal_menu_style)
+        vertical_align_menu = customtkinter.CTkOptionMenu(alignment_frame,command=request_pygame_update,dropdown_font=Styles.InterFont,values=list(AlignmentData.vertical_align_offset.keys()),variable=AlignmentData.vertical_align,**Styles.normal_menu_style)
 
         # GRID PARAMETERS
         alignment_frame.grid_columnconfigure([0,1,2,3], weight=1,uniform="a")
@@ -417,13 +475,16 @@ class UI():
         model_with_label = customtkinter.CTkLabel(model_frame, text="Width",text_color=Styles.light_gray,font=Styles.InterFont)
         model_height_label = customtkinter.CTkLabel(model_frame, text="Height",text_color=Styles.light_gray,font=Styles.InterFont)
         model_depth_label = customtkinter.CTkLabel(model_frame, text="Depth",text_color=Styles.light_gray,font=Styles.InterFont)
-        model_width_entry = customtkinter.CTkEntry(model_frame, **Styles.disabled_entry_style,textvariable=customtkinter.StringVar(value="Width"),font=Styles.InterFont,justify="center")
-        model_height_entry = customtkinter.CTkEntry(model_frame, **Styles.disabled_entry_style,textvariable=customtkinter.StringVar(value="Height"),font=Styles.InterFont,justify="center")
-        model_depth_entry = customtkinter.CTkEntry(model_frame, **Styles.disabled_entry_style,textvariable=customtkinter.StringVar(value="Depth"),font=Styles.InterFont,justify="center")
+        ResizeData.width = customtkinter.StringVar(value=ResizeData.width)
+        ResizeData.height = customtkinter.StringVar(value=ResizeData.height)
+        ResizeData.depth = customtkinter.StringVar(value=ResizeData.depth)
+        model_width_entry = customtkinter.CTkEntry(model_frame, **Styles.disabled_entry_style,textvariable=ResizeData.width,font=Styles.InterFont,justify="center")
+        model_height_entry = customtkinter.CTkEntry(model_frame, **Styles.disabled_entry_style,textvariable=ResizeData.height,font=Styles.InterFont,justify="center")
+        model_depth_entry = customtkinter.CTkEntry(model_frame, **Styles.disabled_entry_style,textvariable=ResizeData.depth,font=Styles.InterFont,justify="center")
         model_wh_X_label = customtkinter.CTkLabel(model_frame, text="X",text_color=Styles.white,font=("Inter", 20))
         model_hd_X_label = customtkinter.CTkLabel(model_frame, text="X",text_color=Styles.white,font=("Inter", 20))
-        sv.model_resize_boolean = tk.IntVar(value=sv.model_resize_boolean)
-        resize_checkbox = customtkinter.CTkCheckBox(model_frame,variable=sv.model_resize_boolean,command=None, text="Resize", onvalue=True, offvalue=False,**Styles.checkbox_style)
+        ResizeData.toggle = tk.IntVar(value=ResizeData.toggle)
+        model_resize_checkbox = customtkinter.CTkCheckBox(model_frame,variable=ResizeData.toggle,command=toggle_model_resize_section, text="Resize", onvalue=True, offvalue=False,**Styles.checkbox_style)
 
 
         # GRID PARAMETERS
@@ -441,9 +502,32 @@ class UI():
         model_height_entry.grid(column=3, row=1, padx=15, pady=0,sticky="n")
         model_hd_X_label.grid(column=4, row=1, padx=0, pady=0,sticky="n")
         model_depth_entry.grid(column=5, row=1, padx=15, pady=0,sticky="n")
-        resize_checkbox.grid(column=6, row=1, padx=0, pady=0,sticky="nw")
+        model_resize_checkbox.grid(column=6, row=1, padx=0, pady=0,sticky="nw")
         
+        def verify_resize(event):
+            """
+            Verify that the resize values are numbers , and correct it if needed.
+            """
+            def reset_entry(widget, dim):
+                widget.set(str(round(PygameParticles.DataParticlesCloud.size[dim],4)))
+            def check_dimension(widget,dim):
+                try :
+                    float(widget.get())
+                except:
+                    reset_entry(widget,dim)
 
+            check_dimension(ResizeData.width,0)
+            check_dimension(ResizeData.height,1)
+            check_dimension(ResizeData.depth,2)
+
+            PygameTempData.update_requested = True
+
+        model_width_entry.bind("<FocusOut>", verify_resize)
+        model_width_entry.bind("<Return>", verify_resize)
+        model_height_entry.bind("<FocusOut>", verify_resize)
+        model_height_entry.bind("<Return>", verify_resize)
+        model_depth_entry.bind("<FocusOut>", verify_resize)
+        model_depth_entry.bind("<Return>", verify_resize)
 
         """ 2 IMAGE """
         # ELEMENT PARAMETERS
@@ -502,7 +586,8 @@ class UI():
         """ 2 PARTICLE """
         # ELEMENT PARAMETERS
         particle_size_label = customtkinter.CTkLabel(particle_frame, text="Particle Size",text_color=Styles.light_gray,font=Styles.InterFont)
-        particle_size_entry = customtkinter.CTkEntry(particle_frame, **Styles.normal_entry_style,textvariable=customtkinter.StringVar(value="1.00"),font=Styles.InterFont)
+        ParticleData.size = customtkinter.StringVar(value=ParticleData.size)
+        particle_size_entry = customtkinter.CTkEntry(particle_frame, **Styles.normal_entry_style,textvariable=ParticleData.size,font=Styles.InterFont)
         particle_size_entry.bind("<FocusOut>", verify_particle_size_widget)
         particle_size_entry.bind("<Return>", verify_particle_size_widget)
 
@@ -570,7 +655,7 @@ class UI():
         # ELEMENTS
         output_path_entry = customtkinter.CTkEntry(export_frame, **Styles.path_style,textvariable=customtkinter.StringVar(value="Output folder"),font=Styles.InterFont)
         choose_output_button = customtkinter.CTkButton(export_frame, image = folder_button_image, text=None, width=20,height=20,command = find_output_dialog,fg_color=Styles.special_color,hover_color=Styles.hover_color,text_color=Styles.white,font=Styles.InterFont)
-        export_button = customtkinter.CTkButton(export_frame, image = export_button_image, text="EXPORT", width=30,height=30,command = export,fg_color=Styles.special_color,hover_color=Styles.hover_color,text_color=Styles.white,font=Styles.InterFont)
+        export_button = customtkinter.CTkButton(export_frame, image = export_button_image, text="EXPORT", width=30,height=30,command = export,**Styles.normal_special_button_style,font=Styles.InterFont_bold)
 
 
         # GRID
@@ -603,7 +688,7 @@ class UI():
 
         PygameData.toggle = tk.IntVar(value=sv.preview_boolean)
         def toggle_preview():
-            PygameTempData.toggle_changed = True
+            PygameTempData.update_requested = True
 
         preview_toggle_checkbox = customtkinter.CTkCheckBox(preview_frame,text="Preview",text_color=Styles.white,command=toggle_preview, variable=PygameData.toggle,onvalue=True, offvalue=False,checkbox_width=20,checkbox_height=20,fg_color=Styles.light_gray,hover_color=Styles.hover_color,bg_color=Styles.almost_black,border_color=Styles.white,border_width=1)
         preview_toggle_checkbox.pack(side=tk.RIGHT, expand=False, padx=0, pady=0)
@@ -615,7 +700,7 @@ class UI():
 
 
 
-
+        
 
 
 

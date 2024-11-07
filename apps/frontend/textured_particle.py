@@ -1,5 +1,5 @@
 import pygame as pg
-from frontend.rendering.matrix_functions import *
+from backend.modifiers import *
 from shared.variables import *
 from numba import njit
 
@@ -17,13 +17,13 @@ class TexturedParticle():
     def __init__(self, texture, position=(0,0,0), color=None, size = None):
         self.position = position
         if size is None:
-            size = texture.get_size()
+            self.size = texture.get_size()
         else :
-            size = (size, size)
-            texture = pg.transform.scale(texture, size)
+            self.size = (size, size)
+            texture = pg.transform.scale(texture, self.size)
         self.rect = texture.get_rect()
         if color is not None:
-            self.surface = pg.Surface(size).convert_alpha().premul_alpha_ip() # Create an empty RGBA image with the same size as the texture
+            self.surface = pg.Surface(self.size).convert_alpha().premul_alpha_ip() # Create an empty RGBA image with the same size as the texture
             self.surface.fill(color) # Fill it with the desired color
             self.surface.blit(texture, (0,0), special_flags=pg.BLEND_RGBA_MULT)
         else:
@@ -42,8 +42,11 @@ class TexturedParticlesCloud:
         
     
     def draw(self):
-        positions = coordinate_axis_rotate(self.particle_positions,AlignmentData.coordinate_axis.get()) # rotate self.particle_positions 
-        positions =positions @ self.render.camera.camera_matrix() # Apply camera matrix
+        print(ParticleData.size.get())
+        modifiers = Modifiers(self.center,self.size)
+        positions = self.particle_positions
+        positions = apply_modifiers(positions, modifiers)
+        positions = positions @ self.render.camera.camera_matrix() # Apply camera matrix
         depths = np.array([position[2] for position in positions], dtype=np.float64)
         positions = positions @ self.render.projection.projection_matrix # Project on -1, 1 plane
         positions /= positions[:, -1].reshape(-1, 1) # Normalize
@@ -65,11 +68,12 @@ class TexturedParticlesCloud:
         blits_sequence = []
         for index, particle in enumerate(sorted_particles):
             if sorted_visibility[index]:
-                scale = ParticleData.size * 30 / sorted_depths[index] #TODO: find correct scaling value
+                scale = float(ParticleData.size.get()) * 30 / sorted_depths[index] #TODO: find correct scaling value
                 if scale <= 0.1 :
                     scale = 0.1
                 scaled_particle = pg.transform.scale_by(particle.surface, scale)
-                position = np.add(sorted_positions[index], -scale / 2)
+                position = np.add(sorted_positions[index], np.divide(scaled_particle.size,-2))
+                # position = np.add(sorted_positions[index], -scale / 2)
                 # self.render.screen.blit(scaled_particle, position)
                 blits_sequence.append((scaled_particle, position))
 

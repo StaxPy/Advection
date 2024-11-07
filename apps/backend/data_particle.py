@@ -14,5 +14,5 @@ class DataParticlesCloud:
         self.particle_positions = np.array([particle.position for particle in self.DataParticlesList], dtype=np.float64)
         self.min_pos = min_pos
         self.max_pos = max_pos
-        self.center = np.add(self.max_pos, self.min_pos)
+        self.center = np.mean([self.min_pos, self.max_pos], axis=0)
         self.size = np.subtract(self.max_pos, self.min_pos)

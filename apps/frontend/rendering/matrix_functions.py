@@ -1,6 +1,5 @@
 import math
 import numpy as np
-from shared.variables import *
 
 
 
@@ -49,8 +48,3 @@ def scale(n):
         [0, 0, 0, 1]
     ])
 
-
-def coordinate_axis_rotate(positions,coordinate_axis):
-    positions = positions @ rotate_y(AlignmentData.coordinate_axis_y[coordinate_axis])
-    positions = positions @ rotate_x(AlignmentData.coordinate_axis_x[coordinate_axis])
-    return positions
