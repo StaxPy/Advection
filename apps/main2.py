@@ -17,6 +17,7 @@ if __name__ == "__main__":
         
         interface.UI.TkApp.update_idletasks()
         interface.UI.TkApp.after(15, loop)
+
     
 
     # (interface is initialized during import)
@@ -33,6 +34,7 @@ if __name__ == "__main__":
     # PygameRenderer.render_new_frame()
     loop()
     interface.UI.TkApp.mainloop()
+
 
 
 

@@ -1,5 +1,4 @@
 import customtkinter as ctk
-import tkinter as tk
 from shared.variables import *
 import multiprocessing
 import backend.file_processor as fp
@@ -10,7 +9,7 @@ import backend.file_processor as fp
 
 
 class MultiProcessor_Progress(ctk.CTkToplevel):
-    def __init__(self, TkApp, export_button):
+    def __init__(self, TkApp, export_button, modifiers):
         super().__init__(TkApp)
         self.TkApp = TkApp
         self.export_button = export_button
@@ -57,7 +56,6 @@ class MultiProcessor_Progress(ctk.CTkToplevel):
         start = int(SequenceData.start.get())
         end = int(SequenceData.end.get())
         args_list = []
-        modifiers = Modifiers()
 
 
         
@@ -89,7 +87,7 @@ class MultiProcessor_Progress(ctk.CTkToplevel):
         self.export_button.configure(state="normal")
         # self.pool.close()
         # self.pool.join()
-        super().destroy()
+        # super().destroy()
         self.destroy()
 
 
@@ -133,6 +131,6 @@ class MultiProcessor_Progress(ctk.CTkToplevel):
         elif os.name == 'posix':  # macOS or Linux
             import subprocess
             subprocess.run(['open', '-R', self.output_path])
-        super.destroy()
+        # super.destroy()
         self.destroy()
             

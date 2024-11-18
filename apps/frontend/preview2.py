@@ -27,8 +27,9 @@ class PygameRender:
         td.load_textures()
         td.load_spritesheet_animations()
 
-        PygameData.texture = td.solo_textures['dust'] # Define the texture used of render (temporary)
-
+        PygameData.texture = td.solo_textures['dust'] # Define the texture used of render (temporary, until a real setting is implemented)
+        self.test_surface = td.spritesheet_textures['dust'] #test
+        self.test_index = 0
 
         self.create_object()
 
@@ -79,8 +80,8 @@ class PygameRender:
         # self.model.draw()
         self.world_axes.draw()
         # self.test_texturedcloud.draw()
-        if PygameParticles.TexturedParticlesCloud:
-            PygameParticles.TexturedParticlesCloud.draw()
+        if ParticlesCache.TexturedParticlesCloud:
+            ParticlesCache.TexturedParticlesCloud.draw()
         # self.grid.draw()
         # self.axes.example_rotation()
         # self.axes.translate([0.002, 0.002, 0.002])
@@ -99,10 +100,10 @@ class PygameRender:
     #         self.clock.tick(self.FPS)
 
     def refresh_cloud_stats(self):
-        self.cloud_size = tuple(float(x) for x in np.round(PygameParticles.TexturedParticlesCloud.size, 2))
+        self.cloud_size = tuple(float(x) for x in np.round(ParticlesCache.TexturedParticlesCloud.size, 2))
         self.cloud_size_display = self.InterFont.render(f'Size: {self.cloud_size}', True, (255, 255, 255))
         
-        self.cloud_count = PygameParticles.TexturedParticlesCloud.count
+        self.cloud_count = ParticlesCache.TexturedParticlesCloud.count
         self.cloud_count_display = self.InterFont.render(f'Count: {self.cloud_count}', True, (255, 255, 255))
 
         
@@ -118,6 +119,12 @@ class PygameRender:
         self.FPS = self.clock.get_fps()
 
 
+        # Triggers an initial refresh when the render is stabilized
+        if self.starting and self.clock.get_time() < 50: # If the frame was rendered in less than 50ms
+            self.starting = False
+            PygameTempData.update_requested = True
+
+
         # Get the events (POSITION IS IMPORTANT, can conflict with tkinter otherwise)
         self.pg_events = pg.event.get() 
 
@@ -129,10 +136,11 @@ class PygameRender:
 
         [exit() for i in self.pg_events if i.type == pg.QUIT]
 
-        # print(PygameSettings.toggle_change)
+        
         # if PygameTempData.input_detected : # Only update render if input has been detected
         #     self.render_new_frame()
         if PygameTempData.update_requested == True:
+            ParticlesCache.TexturedParticlesCloud.modifiers = Modifiers() # Update the modifiers only when needed
             self.render_new_frame()
             PygameTempData.update_requested = False
 
@@ -150,8 +158,10 @@ class PygameRender:
         fps_display = self.InterFont.render(f'FPS: {round(self.FPS)}', True, (255, 255, 255))
         self.screen.blit(fps_display, (10, 70))
 
+        
 
-        ''' TEST ANIMATION'''
+        
+        ''' TEST ANIMATION 1'''
         # current_time = pg.time.get_ticks()
         # if current_time - self.last_animation_update >= self.animation_cooldown:
         #     self.animation_frame += 1
@@ -162,9 +172,14 @@ class PygameRender:
         # # Show current frame
         # self.screen.blit(pg.transform.scale(td.animation_textures['dust'][self.animation_frame], (64,64)), (100,300))
 
-        ''''''
+        
 
-
+        ''' TEST ANIMATION 2 
+        # self.screen.blit(self.test_surface, (100,300),(0,self.test_index*8,8,8))
+        # self.test_index += 1
+        # if self.test_index >= 6:
+        #     self.test_index = 0
+        '''
 
         # pg.display.set_caption(str(self.clock.get_fps()))
         pg.display.flip()
@@ -176,8 +191,10 @@ class PygameRender:
     def inputs_and_events(self):
 
 
-        if self.starting:
-            PygameTempData.update_requested = True
+        # if self.starting:
+        #     PygameTempData.update_requested = True
+
+
         # if PygameTempData.next_frame_freeze:
         #     PygameTempData.input_detected = False
         #     PygameTempData.next_frame_freeze = False
@@ -185,8 +202,8 @@ class PygameRender:
         for event in self.pg_events:
 
             if event.type == pg.MOUSEBUTTONDOWN:
-                if self.starting:
-                    self.starting = False
+                # if self.starting:
+                #     self.starting = False
                 PygameTempData.update_requested = True
                 if event.button == 3:  # Right mouse button
                     self.last_mouse_pos = event.pos
@@ -218,8 +235,8 @@ class PygameRender:
 
 
             if event.type == pg.MOUSEBUTTONUP:
-                if self.starting:
-                    self.starting = False
+                # if self.starting:
+                #     self.starting = False
                 # PygameTempData.input_detected = False
                 if event.button == 3:   # Right mouse button released
                     self.last_mouse_pos = None

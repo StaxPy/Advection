@@ -248,10 +248,16 @@ def sample_color_from_texture(texcoord, img):
 
 
 # def write_mcfunction_file(mcfunction_file_path, vertices, texture_coords, faces, materials, textures, size=0.5, deltax=0, deltay=0, deltaz=0, speed=0, count=1):
-def write_mcfunction_file(input_file_path, output_path, output_name,modifiers):
+def write_mcfunction_file(input, output_path, output_name,modifiers):
 
-    """Writes the particle commands to an MCFunction file using colors from the face centers."""
-    DataParticlesCloud =create_DataParticlesCloud_from_file(input_file_path)
+    if input is isinstance(str):
+        """Writes the particle commands to an MCFunction file using colors from the face centers."""
+        CurrentDataParticlesCloud = create_DataParticlesCloud_from_file(input)
+    elif input is isinstance(DataParticlesCloud):
+        CurrentDataParticlesCloud = input
+    else:
+        print("write_mcfunction_file: input is not a valid file path or DataParticlesCloud object.")
+        return
 
     os.makedirs(output_path, exist_ok=True) # Create the output directory if it doesn't exist
     mcfunction_file_path = os.path.join(output_path, f"{output_name}.mcfunction")
@@ -262,16 +268,16 @@ def write_mcfunction_file(input_file_path, output_path, output_name,modifiers):
     speed = 0
     count = 1
 
-    positions = apply_alignment_modifiers(DataParticlesCloud.particle_positions, modifiers)
+    positions = apply_alignment_modifiers(CurrentDataParticlesCloud.particle_positions, modifiers)
 
     commands = []
-    for index, particle in enumerate(DataParticlesCloud.DataParticlesList):
+    for index, particle in enumerate(CurrentDataParticlesCloud.DataParticlesList):
         # Format the particle command with fixed decimal positions
         x, y, z, _ = positions[index]
         r, g, b, a = particle.color
         commands.append(
-            f"particle dust{{color:[{r/255},{g/255},{b/255}],scale:{float(ParticleData.size.get())}}} "
-            f"~{x:.5f} ~{y:.5f} ~{z:.5f} {deltax} {deltay} {deltaz} {speed} {count} {ParticleData.viewmode}"
+            f"particle dust{{color:[{r/255},{g/255},{b/255}],scale:{modifiers.particle_size}}} "
+            f"~{x:.5f} ~{y:.5f} ~{z:.5f} {deltax} {deltay} {deltaz} {speed} {count} {modifiers.viewmode}"
         )
 
 
@@ -282,21 +288,50 @@ def write_mcfunction_file(input_file_path, output_path, output_name,modifiers):
 
 
 
-def create_DataParticlesCloud_from_image(image_path, grid_resolution=200, threshold=240, final_width=10):
+def create_DataParticlesCloud_from_image(image_path, threshold=240):
+    if sv.DEBUG:
+        print("Creating DataParticlesCloud from image...")
     # Open the image and convert it to RGBA
     img = Image.open(image_path).convert('RGBA')
-    
-    width = grid_resolution
-    height = int((img.height / img.width) * grid_resolution)
-    # Normalize size by resizing the image to fit the grid resolution
-    img_resized = img.resize((grid_resolution, int((img.height / img.width) * grid_resolution)), Image.Resampling.BICUBIC)    
+    InputData.image_resolution_x, InputData.image_resolution_y = img.width, img.height #Store original resolution
+
+    if ImageData.reset_to_input: # Reset the image data from input
+        ImageData.resolution_x.set(img.width)
+        ImageData.resolution_y.set(img.height)
+        width = int(ImageData.resolution_x.get())
+        height = int(ImageData.resolution_y.get())
+        ImageData.resolution_ratio = width/height
+        ImageData.size_ratio = width/height
+        ImageData.reset_to_input = False
+    else :
+        width = int(ImageData.resolution_x.get())
+        height = int(ImageData.resolution_y.get())
+        img = img.resize((width, height), Image.Resampling.BICUBIC)  
+
+
+    # Get the resolution setting
+    # resolution_x, resolution_y = round(float(ImageData.resolution_x.get())), round(float(ImageData.resolution_y.get()))
+    # density = float(ImageData.density.get())
+
+    # if (resolution_x, resolution_y) == (0,0):
+    #     width = img.width
+    #     height = img.height
+    #     ImageData.resolution_x.set(width), ImageData.resolution_y.set(height) # Init the image res setting
+    #     ImageData.width.set(width/density) # Init the image size
+    #     ImageData.height.set(height/density)
+        
+    # else:
+    #     width, height = resolution_x, resolution_y
+    #     # Normalize size by resizing the image to fit the grid resolution
+    #     img = img.resize((width, height), Image.Resampling.BICUBIC)    
+
     
     # Create a list to store the grid of colored points (x, y, color)
     dataParticlesList = []
     
     # Get pixel data from the resized image
-    pixels = np.array(img_resized)
-    min_x, min_y, min_z, max_x, max_y, max_z = 0, 0, 0, 0, 0, 0
+    pixels = np.array(img)
+    min_x, min_y, min_z, max_x, max_y, max_z = 0, -1, 0, 1, 0, 0
     # Loop through each grid cell and sample the color at the center
     for i in range(width):
         for j in range(height):
@@ -310,11 +345,11 @@ def create_DataParticlesCloud_from_image(image_path, grid_resolution=200, thresh
             # Calculate the normalized (x, y) coordinates
             # normalized_x = i/(max(width, height))
             # normalized_y = j/(max(width, height))
-            normalized_x = i/width*final_width
-            normalized_y = j/width*-final_width
+            normalized_x = i/width
+            normalized_y = -j/height
             
-            min_x, min_y, min_z = min(min_x, normalized_x), min(min_y, normalized_y), min(min_z, 0)
-            max_x, max_y, max_z = max(max_x, normalized_x), max(max_y, normalized_y), max(max_z, 0)
+            # min_x, min_y = min(min_x, normalized_x), min(min_y, normalized_y)
+            # max_x, max_y = max(max_x, normalized_x), max(max_y, normalized_y)
 
             position = normalized_x, normalized_y, 0 , 1
             # Add the position and color to the grid points
@@ -324,7 +359,7 @@ def create_DataParticlesCloud_from_image(image_path, grid_resolution=200, thresh
         # particle_list.append(Preview.TexturedParticle(face_center, particle_texture, (r, g, b)))
     # Return the particle list and the size (range) of the original particle cloud
 
-
+    print(width, height)
     return DataParticlesCloud(dataParticlesList, (min_x, min_y, min_z), (max_x, max_y, max_z))
 
 

@@ -39,13 +39,12 @@ class TexturedParticlesCloud:
         self.center = DataParticlesCloud.center
         self.size = DataParticlesCloud.size
         self.count = DataParticlesCloud.count
+        self.modifiers = Modifiers()
         
     
     def draw(self):
-        print(ParticleData.size.get())
-        modifiers = Modifiers(self.center,self.size)
         positions = self.particle_positions
-        positions = apply_modifiers(positions, modifiers)
+        positions = apply_modifiers(positions, self.modifiers)
         positions = positions @ self.render.camera.camera_matrix() # Apply camera matrix
         depths = np.array([position[2] for position in positions], dtype=np.float64)
         positions = positions @ self.render.projection.projection_matrix # Project on -1, 1 plane
@@ -68,7 +67,7 @@ class TexturedParticlesCloud:
         blits_sequence = []
         for index, particle in enumerate(sorted_particles):
             if sorted_visibility[index]:
-                scale = float(ParticleData.size.get()) * 30 / sorted_depths[index] #TODO: find correct scaling value
+                scale = float(ParticleData.size) * 30 / sorted_depths[index] #TODO: find correct scaling value
                 if scale <= 0.1 :
                     scale = 0.1
                 scaled_particle = pg.transform.scale_by(particle.surface, scale)
