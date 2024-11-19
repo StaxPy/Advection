@@ -91,12 +91,12 @@ class UI():
                 value = 0.01
             ParticleData.size = round(value,2) # Update the shared variable
             UI.particle_size_tooltip.configure(message=ParticleData.size) # Update the tooltip
-            PygameTempData.update_requested = True # Update the preview
+            PygameTempData.update_requested += 1 # Update the preview
 
 
 
         def request_pygame_update(value=None):
-            PygameTempData.update_requested = True
+            PygameTempData.update_requested += 1
 
 
 
@@ -117,8 +117,14 @@ class UI():
             # Update the global input mode
             if InputData.extension == ".obj":
                 InputData.mode = "model"
+                UI.image_frame.grid_forget()
+                UI.model_frame.grid(row = 3, column = 0,sticky="nsew",pady=5,padx=10)
+                PygameTempData.update_requested += 1
             elif InputData.extension == ".png" or InputData.extension == ".jpg" or InputData.extension == ".jpeg":
                 InputData.mode = "image"
+                UI.model_frame.grid_forget()
+                UI.image_frame.grid(row = 3, column = 0,sticky="nsew",pady=5,padx=10)
+                PygameTempData.update_requested += 1
             else:
                 return # Return if the extension is not supported
             
@@ -145,7 +151,8 @@ class UI():
 
 
         def update_particles_cloud():
-            print("refresh_preview")
+            if sv.DEBUG:
+                print("update_particles_cloud")
             path = InputData.path # Charge default path
 
             if SequenceData.toggle.get() == 1: # If the sequence toggle is on
@@ -159,13 +166,19 @@ class UI():
                 else: 
                     ParticlesCache.TexturedParticlesCloud = PygameData.PygameRenderer.DataParticlesCloud_to_TexturedParticlesCloud(ParticlesCache.DataParticlesCloud) # Create the TexturedParticlesCloud
                     PygameData.PygameRenderer.refresh_cloud_stats()
-                    PygameTempData.update_requested = True
+                    PygameTempData.update_requested += 2
 
 
         def reset_model_resize():
-            ModelData.width.set(str(round(ParticlesCache.DataParticlesCloud.size[0],4)))
-            ModelData.height.set(str(round(ParticlesCache.DataParticlesCloud.size[1],4)))
-            ModelData.depth.set(str(round(ParticlesCache.DataParticlesCloud.size[2],4)))
+            width = round(ParticlesCache.DataParticlesCloud.size[0],4)
+            height = round(ParticlesCache.DataParticlesCloud.size[1],4)
+            depth = round(ParticlesCache.DataParticlesCloud.size[2],4)
+            ModelData.width.set(width)
+            ModelData.height.set(height)
+            ModelData.depth.set(depth)
+            ModelData.old_width = width
+            ModelData.old_height = height
+            ModelData.old_depth = depth
 
         def reset_image_size():
             # Resets the image size
@@ -269,27 +282,7 @@ class UI():
                 UI.preview_frame_slider.configure(**Styles.disabled_preview_slider_style)
 
 
-        def toggle_model_resize_section():
 
-            if ModelData.width.get() == '1.00000':
-                ModelData.width.set(str(round(ParticlesCache.DataParticlesCloud.size[0],4)))
-            if ModelData.height.get() == '1.00000':
-                ModelData.height.set(str(round(ParticlesCache.DataParticlesCloud.size[1],4)))
-            if ModelData.depth.get() == '1.00000':
-                ModelData.depth.set(str(round(ParticlesCache.DataParticlesCloud.size[2],4)))
-
-
-            # If ModelResize is checked
-            if ModelData.resize_toggle.get() == 1:
-                UI.model_width_entry.configure(**Styles.normal_entry_style)
-                UI.model_height_entry.configure(**Styles.normal_entry_style)
-                UI.model_depth_entry.configure(**Styles.normal_entry_style)
-            else:
-                UI.model_width_entry.configure(**Styles.disabled_entry_style)
-                UI.model_height_entry.configure(**Styles.disabled_entry_style)
-                UI.model_depth_entry.configure(**Styles.disabled_entry_style)
-
-            PygameTempData.update_requested = True
 
 
 
@@ -385,15 +378,15 @@ class UI():
 
         # GRID PARAMETERS
         config_frame.columnconfigure([0], weight=1,uniform="a")
-        config_frame.rowconfigure([0,1,2,3,4,5],weight=1)
+        config_frame.rowconfigure([0,1,2,3,4],weight=1)
 
         # PLACEMENT PARAMETERS
         input_frame.grid(row = 0, column = 0,sticky="nsew",pady=5,padx=10)
         sequence_frame.grid(row = 1, column = 0,sticky="nsew",pady=5,padx=10)
         alignment_frame.grid(row = 2, column = 0,sticky="nsew",pady=5,padx=10)
-        model_frame.grid(row = 3, column = 0,sticky="nsew",pady=5,padx=10)
-        image_frame.grid(row = 4, column = 0,sticky="nsew",pady=5,padx=10)
-        particle_frame.grid(row = 5, column = 0,sticky="nsew",pady=5,padx=10)
+        # model_frame.grid(row = 3, column = 0,sticky="nsew",pady=5,padx=10)
+        # image_frame.grid(row = 4, column = 0,sticky="nsew",pady=5,padx=10)
+        particle_frame.grid(row = 4, column = 0,sticky="nsew",pady=5,padx=10)
 
 
 
@@ -513,17 +506,31 @@ class UI():
         ModelData.width = customtkinter.StringVar(value=ModelData.width)
         ModelData.height = customtkinter.StringVar(value=ModelData.height)
         ModelData.depth = customtkinter.StringVar(value=ModelData.depth)
-        model_width_entry = customtkinter.CTkEntry(model_frame, **Styles.disabled_entry_style,textvariable=ModelData.width,font=Styles.InterFont,justify="center")
-        model_height_entry = customtkinter.CTkEntry(model_frame, **Styles.disabled_entry_style,textvariable=ModelData.height,font=Styles.InterFont,justify="center")
-        model_depth_entry = customtkinter.CTkEntry(model_frame, **Styles.disabled_entry_style,textvariable=ModelData.depth,font=Styles.InterFont,justify="center")
+        model_width_entry = customtkinter.CTkEntry(model_frame, **Styles.normal_entry_style,textvariable=ModelData.width,font=Styles.InterFont,justify="center")
+        model_height_entry = customtkinter.CTkEntry(model_frame, **Styles.normal_entry_style,textvariable=ModelData.height,font=Styles.InterFont,justify="center")
+        model_depth_entry = customtkinter.CTkEntry(model_frame, **Styles.normal_entry_style,textvariable=ModelData.depth,font=Styles.InterFont,justify="center")
         model_wh_X_label = customtkinter.CTkLabel(model_frame, text="X",text_color=Styles.white,font=("Inter", 20))
         model_hd_X_label = customtkinter.CTkLabel(model_frame, text="X",text_color=Styles.white,font=("Inter", 20))
-        ModelData.resize_toggle = tk.IntVar(value=ModelData.resize_toggle)
-        model_resize_checkbox = customtkinter.CTkCheckBox(model_frame,variable=ModelData.resize_toggle,command=toggle_model_resize_section, text="Resize", onvalue=True, offvalue=False,**Styles.checkbox_style)
-
+        # ModelData.resize_toggle = tk.IntVar(value=ModelData.resize_toggle)
+        # model_resize_checkbox = customtkinter.CTkCheckBox(model_frame,variable=ModelData.resize_toggle,command=toggle_model_resize_section, text="Resize", onvalue=True, offvalue=False,**Styles.checkbox_style)
+        def lock_model_size_ratio():
+            if sv.DEBUG == True:
+                print("Locking model size ratio")
+            if ModelData.lock_size_ratio == True:
+                ModelData.lock_size_ratio = False
+                UI.model_size_ratio_button_1.configure(image = UI.link_open_button_image)
+                UI.model_size_ratio_button_2.configure(image = UI.link_open_button_image)
+            else:
+                ModelData.lock_size_ratio = True
+                UI.model_size_ratio_button_1.configure(image = UI.link_close_button_image)
+                UI.model_size_ratio_button_2.configure(image = UI.link_close_button_image)
+        
+        
+        model_size_ratio_button_1 = customtkinter.CTkButton(model_frame,command=lock_model_size_ratio, image = link_close_button_image, text=None,width=0, **Styles.ratio_button_style)
+        model_size_ratio_button_2 = customtkinter.CTkButton(model_frame,command=lock_model_size_ratio, image = link_close_button_image, text=None,width=0, **Styles.ratio_button_style)
 
         # GRID PARAMETERS
-        model_frame.grid_columnconfigure([1,3,5,6], weight=1,uniform="a")
+        model_frame.grid_columnconfigure([1,3,5], weight=1,uniform="a")
         model_frame.grid_rowconfigure([0,1], weight=1,uniform="a")
 
         # PLACEMENT PARAMETERS
@@ -533,12 +540,84 @@ class UI():
         model_depth_label.grid(column=5, row=0, padx=0, pady=0,sticky="s")
 
         model_width_entry.grid(column=1, row=1, padx=15, pady=0,sticky="n")
-        model_wh_X_label.grid(column=2, row=1, padx=0, pady=0,sticky="n")
+        # model_wh_X_label.grid(column=2, row=1, padx=0, pady=0,sticky="n")
         model_height_entry.grid(column=3, row=1, padx=15, pady=0,sticky="n")
-        model_hd_X_label.grid(column=4, row=1, padx=0, pady=0,sticky="n")
+        # model_hd_X_label.grid(column=4, row=1, padx=0, pady=0,sticky="n")
         model_depth_entry.grid(column=5, row=1, padx=15, pady=0,sticky="n")
-        model_resize_checkbox.grid(column=6, row=1, padx=0, pady=0,sticky="nw")
+        # model_resize_checkbox.grid(column=6, row=1, padx=0, pady=0,sticky="nw")
+        model_size_ratio_button_1.grid(column=2, row=1, padx=0, pady=0,sticky="nw")
+        model_size_ratio_button_2.grid(column=4, row=1, padx=0, pady=0,sticky="nw")
         
+        def verify_model_entries(dim: str):
+            if sv.DEBUG:
+                print("Verifying :" + dim)
+
+            
+        
+            lock_ratio = ModelData.lock_size_ratio
+            height_ratio = ModelData.height_ratio
+            depth_ratio = ModelData.depth_ratio
+            if dim == "width":
+                tested_var = ModelData.width
+                old_value = ModelData.old_width
+                default = ParticlesCache.DataParticlesCloud.size[0]
+            elif dim == "height":
+                tested_var = ModelData.height
+                old_value = ModelData.old_height
+                default = ParticlesCache.DataParticlesCloud.size[1]
+            elif dim == "depth":
+                tested_var = ModelData.depth
+                old_value = ModelData.old_depth
+                default = ParticlesCache.DataParticlesCloud.size[2]
+            else:
+                raise Exception("Invalid type")
+
+            def round_float_to_int(float):
+                return int(float) if float.is_integer() else float
+            
+            
+
+
+            try: # Try to convert the entry to a number
+                new_value = round_float_to_int(float(numexpr.evaluate(tested_var.get())))
+            except: # If the entry is invalid, reset to default
+                if sv.DEBUG: print("Invalid entry")
+                new_value = round_float_to_int(default)
+
+            finally: # Finally, update the variable to the result (rounded and eventually result of the operation)
+                tested_var.set(new_value) # Update the tested entry to the formatted value
+                multiplier = new_value / old_value
+                width = float(ModelData.width.get())
+                height = float(ModelData.height.get())
+                depth = float(ModelData.depth.get())
+
+                if lock_ratio == True:
+                    if dim == "width":
+                        ModelData.height.set(height * multiplier)
+                        ModelData.depth.set(depth * multiplier)
+                    elif dim == "height":
+                        ModelData.width.set(width * multiplier)
+                        ModelData.depth.set(depth * multiplier)
+                    elif dim == "depth":
+                        ModelData.width.set(width * multiplier)
+                        ModelData.height.set(height * multiplier)
+                ModelData.old_width = width
+                ModelData.old_height = height
+                ModelData.old_depth = depth
+
+                
+
+            PygameTempData.update_requested += 1
+        
+        def verify_model_width_entry(_):
+            UI.verify_model_entries("width")
+        
+        def verify_model_height_entry(_):
+            UI.verify_model_entries("height")
+        
+        def verify_model_depth_entry(_):
+            UI.verify_model_entries("depth")
+
         def verify_resize(_):
             """
             Verify that the resize values are numbers , and correct it if needed.
@@ -555,14 +634,14 @@ class UI():
             check_dimension(ModelData.height,1)
             check_dimension(ModelData.depth,2)
 
-            PygameTempData.update_requested = True
+            PygameTempData.update_requested += 1
 
-        model_width_entry.bind("<FocusOut>", verify_resize)
-        model_width_entry.bind("<Return>", verify_resize)
-        model_height_entry.bind("<FocusOut>", verify_resize)
-        model_height_entry.bind("<Return>", verify_resize)
-        model_depth_entry.bind("<FocusOut>", verify_resize)
-        model_depth_entry.bind("<Return>", verify_resize)
+        model_width_entry.bind("<FocusOut>", verify_model_width_entry)
+        model_width_entry.bind("<Return>", verify_model_width_entry)
+        model_height_entry.bind("<FocusOut>", verify_model_height_entry)
+        model_height_entry.bind("<Return>", verify_model_height_entry)
+        model_depth_entry.bind("<FocusOut>", verify_model_depth_entry)
+        model_depth_entry.bind("<Return>", verify_model_depth_entry)
 
         """ 2 IMAGE """
         # ELEMENT PARAMETERS
@@ -589,62 +668,24 @@ class UI():
 
         ImageData.width = customtkinter.StringVar(value=ImageData.width)
         ImageData.height = customtkinter.StringVar(value=ImageData.height)
-        image_width_entry = customtkinter.CTkEntry(image_frame, **Styles.disabled_entry_style,textvariable=ImageData.width,font=Styles.InterFont,justify="center")
-        image_height_entry = customtkinter.CTkEntry(image_frame, **Styles.disabled_entry_style,textvariable=ImageData.height,font=Styles.InterFont,justify="center")
+        image_width_entry = customtkinter.CTkEntry(image_frame, **Styles.normal_entry_style,textvariable=ImageData.width,font=Styles.InterFont,justify="center")
+        image_height_entry = customtkinter.CTkEntry(image_frame, **Styles.normal_entry_style,textvariable=ImageData.height,font=Styles.InterFont,justify="center")
         image_width_entry.bind("<FocusOut>", verify_image_width)
         image_width_entry.bind("<Return>", verify_image_width)
         image_height_entry.bind("<FocusOut>", verify_image_height)
         image_height_entry.bind("<Return>", verify_image_height)
 
-        lock_image_ratio_toggle_button = customtkinter.CTkButton(image_frame,command=lock_image_size_ratio, image = link_close_button_image, text=None,width=0,**Styles.icon_button_style)
+        lock_image_ratio_toggle_button = customtkinter.CTkButton(image_frame,command=lock_image_size_ratio, image = link_close_button_image, text=None,width=0,**Styles.ratio_button_style)
         size_X_label = customtkinter.CTkLabel(image_frame, text="X",text_color=Styles.white,font=("Inter", 20))
 
-        def density_toggle():
-            
-            if UI.density_checkbox.get():
-                ImageData.autosize = True
-                UI.width_density_entry.configure(**Styles.normal_entry_style)
-                UI.height_density_entry.configure(**Styles.normal_entry_style)
-                UI.image_height_entry.configure(**Styles.disabled_entry_style)
-                UI.image_width_entry.configure(**Styles.disabled_entry_style)
-            else:
-                ImageData.autosize = False
-                UI.width_density_entry.configure(**Styles.disabled_entry_style)
-                UI.height_density_entry.configure(**Styles.disabled_entry_style)
-                UI.image_height_entry.configure(**Styles.normal_entry_style)
-                UI.image_width_entry.configure(**Styles.normal_entry_style)
-
-        density_checkbox = customtkinter.CTkCheckBox(image_frame,command=density_toggle, text=None, width=20, variable=customtkinter.IntVar(value=1), onvalue=True, offvalue=False,**Styles.checkbox_style)
-        density_tooltip = CTkToolTip.CTkToolTip(density_checkbox, message= "Define the size automatically using density (particles per block)",bg_color= Styles.light_gray, text_color= Styles.black, border_width=10,border_color= Styles.light_gray, alpha= 1, delay= 0, x_offset= -170, y_offset= 30, justify= "center",font= Styles.InterFont)
-
         def verify_density_x_entry(event):
-            """
-            Verify that the density is a float and trigger a preview update
-            """
             UI.verify_image_entries(type="image_density", dim="X",widget=event.widget)
-
-            return
-            try :
-                new_width_density = float(numexpr.evaluate(ImageData.width_density.get()))
-                new_height_density = float(numexpr.evaluate(ImageData.height_density.get()))
-                if new_width_density.is_integer(): # Remove the .0 when the number is round
-                    new_width_density = int(new_width_density)
-                if new_height_density.is_integer(): # Remove the .0 when the number is round
-                    new_height_density = int(new_height_density)
-            except:
-                new_width_density, new_height_density = ImageData.default_density
-            else: # Update the image
-                ImageData.width.set(float(InputData.image_resolution_x / new_width_density))
-                ImageData.height.set(float(InputData.image_resolution_y / new_height_density))
-            finally:
-                ImageData.width_density.set(new_width_density)
-                ImageData.height_density.set(new_height_density)
-            PygameTempData.update_requested = True
 
         def verify_density_y_entry(event):
             UI.verify_image_entries(type="image_density", dim="Y",widget=event.widget)
 
         density_label = customtkinter.CTkLabel(image_frame, text="Density",text_color=Styles.light_gray,font=Styles.InterFont)
+        density_tooltip = CTkToolTip.CTkToolTip(density_label, message= "Define the size automatically using density (particles per block)",bg_color= Styles.light_gray, text_color= Styles.black, border_width=10,border_color= Styles.light_gray, alpha= 1, delay= 0, x_offset= -170, y_offset= 30, justify= "center",font= Styles.InterFont)
         ImageData.width_density = customtkinter.StringVar(value=ImageData.width_density)
         width_density_entry = customtkinter.CTkEntry(image_frame, **Styles.normal_entry_style,textvariable=ImageData.width_density,font=Styles.InterFont,justify="center")
         width_density_entry.bind("<FocusOut>", verify_density_x_entry)
@@ -658,9 +699,10 @@ class UI():
 
         # ImageData.resolution = customtkinter.StringVar(value=ImageData.resolution[0]),customtkinter.StringVar(value=ImageData.resolution[1])
         def update_image_resolution():
-            print("Updating image resolution")
-            UI.verify_image_resolution_X()
-            UI.verify_image_resolution_Y()
+            if sv.DEBUG:
+                print("Updating image resolution",ImageData.resolution_x.get(),ImageData.resolution_y.get())
+            # UI.verify_image_resolution_X()
+            # UI.verify_image_resolution_Y()
             UI.update_particles_cloud()
 
         def lock_image_resolution_ratio():
@@ -680,9 +722,9 @@ class UI():
         image_resolution_width_entry = customtkinter.CTkEntry(image_frame, **Styles.normal_entry_style,textvariable=ImageData.resolution_x,font=Styles.InterFont,justify="center")
         image_resolution_height_entry = customtkinter.CTkEntry(image_frame, **Styles.normal_entry_style,textvariable=ImageData.resolution_y,font=Styles.InterFont,justify="center")
         
-        lock_resolution_ratio_toggle_button = customtkinter.CTkButton(image_frame,command=lock_image_resolution_ratio, image = link_close_button_image, text=None,width=0,**Styles.icon_button_style)
+        lock_resolution_ratio_toggle_button = customtkinter.CTkButton(image_frame,command=lock_image_resolution_ratio, image = link_close_button_image, text=None,width=0,**Styles.ratio_button_style)
         resolution_X_label = customtkinter.CTkLabel(image_frame, text="X",text_color=Styles.white,font=("Inter", 20))
-        image_resolution_update_button = customtkinter.CTkButton(image_frame,command=update_image_resolution, text="Update",width=0,**Styles.normal_button_style)
+        update_image_resolution_button = customtkinter.CTkButton(image_frame,command=update_image_resolution, text="Update",width=0,**Styles.normal_button_style)
         # sv.image_resize_boolean = tk.IntVar(value=sv.image_resize_boolean)
         # image_resize_checkbox = customtkinter.CTkCheckBox(image_frame,variable=sv.image_resize_boolean,command=None, text="Resize", onvalue=True, offvalue=False,**Styles.checkbox_style)
 
@@ -699,25 +741,24 @@ class UI():
         image_width_entry.grid(column=1, row=1, padx=15, pady=0,sticky="n")
         image_height_entry.grid(column=3, row=1, padx=15, pady=0,sticky="n")
         lock_image_ratio_toggle_button.grid(column=2, row=1, rowspan=2, padx=0, pady=0,sticky="ns")
-        density_checkbox.grid(column=4, row=2, padx=0, pady=0,sticky="w")
 
         density_label.grid(column=0, row=2, padx=0, pady=0,sticky="e")
         width_density_entry.grid(column=1, row=2, padx=15, pady=0)
         height_density_entry.grid(column=3, row=2, padx=15, pady=0)
 
         def verify_image_resolution_X(event=None):
-            UI.verify_image_entries(type="image_resolution", dim="X",widget=event.widget)
+            UI.verify_image_entries(type="image_resolution", dim="X", widget=event.widget)
 
         def verify_image_resolution_Y(event=None):
-            UI.verify_image_entries(type="image_resolution", dim="Y",widget=event.widget)
+            UI.verify_image_entries(type="image_resolution", dim="Y", widget=event.widget)
 
 
         def verify_image_entries(type: str, dim: str, widget: tk.Widget = None):
             if sv.DEBUG:
                 print("Verifying :" + type + " " + dim)
-
-            if widget.cget("state") == "disabled": # Skip if the widget is disabled
-                return
+            if widget is not None:
+                if widget.cget("state") == "disabled": # Skip if the widget is disabled
+                    return
             
             if type == "image_resolution":
                 lock_ratio = ImageData.lock_resolution_ratio
@@ -773,8 +814,6 @@ class UI():
                     if dim == "X": # Update the Y dimension
                         if sv.DEBUG: print("locked, updating linked_var to ",new_value,"/",ratio)
                         new_linked_value = round_float_to_int(new_value/ratio)
-                        if new_value.is_integer(): # Remove the .0 when the number is round
-                            new_value = int(new_value)
                         if type == "image_resolution": new_linked_value = round(new_linked_value)
                         linked_var.set(new_linked_value)
                     elif dim == "Y": # Update the X dimension
@@ -796,8 +835,10 @@ class UI():
                 elif type == "image_size":
                     ImageData.width_density.set(round_float_to_int(float(InputData.image_resolution_x / float(ImageData.width.get()))))
                     ImageData.height_density.set(round_float_to_int(float(InputData.image_resolution_y / float(ImageData.height.get()))))
+                elif type == "image_resolution":
+                    UI.update_image_resolution()
 
-            PygameTempData.update_requested = True
+            PygameTempData.update_requested += 1
 
 
 
@@ -812,7 +853,7 @@ class UI():
         image_resolution_width_entry.grid(column=1, row=4, padx=15, pady=0,sticky="n")
         image_resolution_height_entry.grid(column=3, row=4, padx=15, pady=0,sticky="n")
         lock_resolution_ratio_toggle_button.grid(column=2, row=4, padx=0, pady=0,sticky="n")
-        image_resolution_update_button.grid(column=4, row=4, padx=0, pady=0,sticky="nw")
+        # update_image_resolution_button.grid(column=4, row=4, padx=0, pady=0,sticky="nw")
         # image_resize_checkbox.grid(column=4, row=4, padx=0, pady=0,sticky="nw")
 
 
@@ -925,7 +966,7 @@ class UI():
 
         PygameData.toggle = tk.IntVar(value=sv.preview_boolean)
         def toggle_preview():
-            PygameTempData.update_requested = True
+            PygameTempData.update_requested += 1
 
         preview_toggle_checkbox = customtkinter.CTkCheckBox(preview_frame,text="Preview",text_color=Styles.white,command=toggle_preview, variable=PygameData.toggle,onvalue=True, offvalue=False,checkbox_width=20,checkbox_height=20,fg_color=Styles.light_gray,hover_color=Styles.hover_color,bg_color=Styles.almost_black,border_color=Styles.white,border_width=1)
         preview_toggle_checkbox.pack(side=tk.RIGHT, expand=False, padx=0, pady=0)

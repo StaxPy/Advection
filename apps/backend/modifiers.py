@@ -32,8 +32,7 @@ def apply_modifiers(positions, modifiers):
     positions = apply_vertical_align(positions, modifiers)
     positions = apply_horizontal_align(positions, modifiers)
     if modifiers.mode == 'model':
-        if modifiers.resize_toggle == 1:
-            positions = np.multiply(positions, np.array(np.divide(modifiers.model_resize,modifiers.size), dtype=np.float64))
+        positions = np.multiply(positions, np.array(np.divide(modifiers.model_resize,modifiers.size), dtype=np.float64))
     elif modifiers.mode == 'image':
         positions = np.multiply(positions, np.array(modifiers.image_size, dtype=np.float64))
     positions = apply_alignment_coordinate_axis(positions, modifiers)

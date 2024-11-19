@@ -250,10 +250,10 @@ def sample_color_from_texture(texcoord, img):
 # def write_mcfunction_file(mcfunction_file_path, vertices, texture_coords, faces, materials, textures, size=0.5, deltax=0, deltay=0, deltaz=0, speed=0, count=1):
 def write_mcfunction_file(input, output_path, output_name,modifiers):
 
-    if input is isinstance(str):
+    if isinstance(input,str):
         """Writes the particle commands to an MCFunction file using colors from the face centers."""
         CurrentDataParticlesCloud = create_DataParticlesCloud_from_file(input)
-    elif input is isinstance(DataParticlesCloud):
+    elif isinstance(input,DataParticlesCloud):
         CurrentDataParticlesCloud = input
     else:
         print("write_mcfunction_file: input is not a valid file path or DataParticlesCloud object.")

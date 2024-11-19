@@ -122,7 +122,7 @@ class PygameRender:
         # Triggers an initial refresh when the render is stabilized
         if self.starting and self.clock.get_time() < 50: # If the frame was rendered in less than 50ms
             self.starting = False
-            PygameTempData.update_requested = True
+            PygameTempData.update_requested += 1
 
 
         # Get the events (POSITION IS IMPORTANT, can conflict with tkinter otherwise)
@@ -139,10 +139,10 @@ class PygameRender:
         
         # if PygameTempData.input_detected : # Only update render if input has been detected
         #     self.render_new_frame()
-        if PygameTempData.update_requested == True:
+        if PygameTempData.update_requested >= 1:
             ParticlesCache.TexturedParticlesCloud.modifiers = Modifiers() # Update the modifiers only when needed
             self.render_new_frame()
-            PygameTempData.update_requested = False
+            PygameTempData.update_requested -= 1
 
 
     def render_new_frame(self):
@@ -192,7 +192,7 @@ class PygameRender:
 
 
         # if self.starting:
-        #     PygameTempData.update_requested = True
+        #     PygameTempData.update_requested += 1
 
 
         # if PygameTempData.next_frame_freeze:
@@ -204,7 +204,7 @@ class PygameRender:
             if event.type == pg.MOUSEBUTTONDOWN:
                 # if self.starting:
                 #     self.starting = False
-                PygameTempData.update_requested = True
+                PygameTempData.update_requested = 1
                 if event.button == 3:  # Right mouse button
                     self.last_mouse_pos = event.pos
                 elif event.button == 2:  # Middle mouse button for pan
@@ -214,7 +214,7 @@ class PygameRender:
 
             if event.type == pg.MOUSEMOTION:
                 if self.last_mouse_pos:  # Rotate camera with left mouse
-                    PygameTempData.update_requested = True
+                    PygameTempData.update_requested = 1
                     dx = event.pos[0] - self.last_mouse_pos[0]
                     dy = event.pos[1] - self.last_mouse_pos[1]
 
@@ -224,7 +224,7 @@ class PygameRender:
 
                     self.last_mouse_pos = event.pos
                 elif self.panning_active:  # Pan camera with middle mouse
-                    PygameTempData.update_requested = True
+                    PygameTempData.update_requested = 1
 
                     input_lateral_motion = event.pos[0] - self.pan_last_mouse_pos[0]
                     input_vertical_motion = event.pos[1] - self.pan_last_mouse_pos[1]
@@ -246,7 +246,7 @@ class PygameRender:
 
             if event.type == pg.MOUSEWHEEL:
                 # PygameTempData.input_detected = True
-                PygameTempData.update_requested = True
+                PygameTempData.update_requested = 1
                 # PygameTempData.next_frame_freeze = True
                 zoom = event.y  # Zoom control with mouse wheel
                 self.camera.input_zoom(zoom)

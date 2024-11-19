@@ -25,8 +25,8 @@ if __name__ == "__main__":
     import frontend.preview2 as preview
     from shared.variables import *
     PygameData.PygameRenderer = preview.PygameRender(sv.WIDTH/2, sv.HEIGHT/5*4, interface.UI.preview_frame)
-    # interface.UI.update_input('Testing_files/character_1.obj')
-    interface.UI.update_input('Testing_files/textures/Dan-shaded-noeyes.png')
+    interface.UI.update_input('Testing_files/character_1.obj')
+    # interface.UI.update_input('Testing_files/textures/Dan-shaded-noeyes.png')
     
 
     
