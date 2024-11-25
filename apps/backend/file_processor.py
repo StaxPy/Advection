@@ -293,19 +293,19 @@ def create_DataParticlesCloud_from_image(image_path, threshold=240):
         print("Creating DataParticlesCloud from image...")
     # Open the image and convert it to RGBA
     img = Image.open(image_path).convert('RGBA')
-    InputData.image_resolution_x, InputData.image_resolution_y = img.width, img.height #Store original resolution
+    InputData.image_resolution_width, InputData.image_resolution_height = img.width, img.height #Store original resolution
 
     if ImageData.reset_to_input: # Reset the image data from input
-        ImageData.resolution_x.set(img.width)
-        ImageData.resolution_y.set(img.height)
-        width = int(ImageData.resolution_x.get())
-        height = int(ImageData.resolution_y.get())
+        ImageData.width_resolution.set(img.width)
+        ImageData.height_resolution.set(img.height)
+        width = int(ImageData.width_resolution.get())
+        height = int(ImageData.height_resolution.get())
         ImageData.resolution_ratio = width/height
         ImageData.size_ratio = width/height
         ImageData.reset_to_input = False
     else :
-        width = int(ImageData.resolution_x.get())
-        height = int(ImageData.resolution_y.get())
+        width = int(ImageData.width_resolution.get())
+        height = int(ImageData.height_resolution.get())
         img = img.resize((width, height), Image.Resampling.BICUBIC)  
 
 
@@ -359,7 +359,6 @@ def create_DataParticlesCloud_from_image(image_path, threshold=240):
         # particle_list.append(Preview.TexturedParticle(face_center, particle_texture, (r, g, b)))
     # Return the particle list and the size (range) of the original particle cloud
 
-    print(width, height)
     return DataParticlesCloud(dataParticlesList, (min_x, min_y, min_z), (max_x, max_y, max_z))
 
 

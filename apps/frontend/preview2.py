@@ -200,7 +200,8 @@ class PygameRender:
         #     PygameTempData.next_frame_freeze = False
 
         for event in self.pg_events:
-
+            if event.type == pg.VIDEORESIZE:
+                PygameTempData.update_requested += 2
             if event.type == pg.MOUSEBUTTONDOWN:
                 # if self.starting:
                 #     self.starting = False
