@@ -16,7 +16,7 @@ if __name__ == "__main__":
     import frontend.preview2 as preview
 
     from shared.variables import *
-    PygameRenderer = preview.PygameRender(sv.WIDTH/2, sv.HEIGHT/5*4, interface.UI.render_frame, OpenGLData.ctx)
+    PygameRenderer = preview.PygameRender(sv.WIDTH/2, sv.HEIGHT/5*4, interface.UI.render_frame)
     PygameData.PygameRenderer = PygameRenderer
 
     # interface.UI.update_input('Testing_files/character_1.obj')
