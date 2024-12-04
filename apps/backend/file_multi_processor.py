@@ -41,7 +41,7 @@ class MultiProcessor_Progress(ctk.CTkToplevel):
         
         self.progress_bar.set(0.01)
         self.label = ctk.CTkLabel(self.frame, text="Progress: 1%",text_color=Styles.white)
-        self.cancel_button = ctk.CTkButton(self.frame, text="Cancel", command=self.destroy,**Styles.normal_button_style)
+        self.cancel_button = ctk.CTkButton(self.frame, text="Cancel", command=self.stop,**Styles.normal_button_style)
         self.open_output_button = ctk.CTkButton(self.frame, text="Open Output Folder", command=self.open_output_folder,**Styles.normal_button_style)
 
         self.progress_bar.pack()
@@ -85,10 +85,10 @@ class MultiProcessor_Progress(ctk.CTkToplevel):
     def stop(self):
         # self.TkApp.attributes("-alpha", 1)
         self.export_button.configure(state="normal")
-        # self.pool.close()
+        self.pool.terminate()
         # self.pool.join()
-        # super().destroy()
-        self.destroy()
+        super().destroy()
+        # self.destroy()
 
 
     def click_close(self):

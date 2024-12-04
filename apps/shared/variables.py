@@ -91,7 +91,7 @@ class InputData():
     last_frame = 0
     seq_length = 0
     sequence_files = {}
-    image_resolution_x, image_resolution_y = 0, 0
+    image_resolution_width, image_resolution_height = 0, 0
 
 class SequenceData():
     toggle = 0
@@ -117,27 +117,28 @@ class AlignmentData():
 
 class ModelData():
     lock_size_ratio = True
-    height_ratio = 0
-    depth_ratio = 0
     width, height, depth = "0", "0", "0"
     old_width, old_height, old_depth = "0", "0", "0"
     
 class ImageData():
-    default_density = (8, 8)
-    width_density = 8
-    height_density = 8
+    default_width_density, default_height_density = 8, 8
+    width_density, height_density = 8, 8
+    old_width_density, old_height_density = 8, 8
     autosize = True
     width, height = 0, 0
+    old_width, old_height = 0, 0
     size_ratio = 0
     lock_size_ratio = True
     reset_to_input = False
-    resolution_x, resolution_y = 0, 0
+    width_resolution, height_resolution = 0, 0
+    old_width_resolution, old_height_resolution = 0, 0
     resolution_ratio = 0
     lock_resolution_ratio = True
 
 class ParticleData():
     size = 1.0
     viewmode = "Force"
+    viewer="@a"
 
 class OutputData():
     path = None

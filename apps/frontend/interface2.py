@@ -93,7 +93,8 @@ class UI():
             UI.particle_size_tooltip.configure(message=ParticleData.size) # Update the tooltip
             PygameTempData.update_requested += 1 # Update the preview
 
-
+        def round_float_to_int(float):
+                return int(float) if float.is_integer() else float
 
         def request_pygame_update(value=None):
             PygameTempData.update_requested += 1
@@ -186,10 +187,15 @@ class UI():
                 return int(float) if float.is_integer() else float
             
             density = float(ImageData.width_density.get())
-            ImageData.resolution_x.set(InputData.image_resolution_x)
-            ImageData.resolution_y.set(InputData.image_resolution_y)
-            ImageData.width.set(round_float_to_int(InputData.image_resolution_x/density)) # Init the image size
-            ImageData.height.set(round_float_to_int(InputData.image_resolution_y/density))
+            ImageData.width_resolution.set(InputData.image_resolution_width)
+            ImageData.height_resolution.set(InputData.image_resolution_height)
+            new_width = round_float_to_int(InputData.image_resolution_width/density)
+            new_height = round_float_to_int(InputData.image_resolution_height/density)
+            ImageData.width.set(new_width) # Init the image size
+            ImageData.height.set(new_width)
+            ImageData.old_width.set(new_width)
+            ImageData.old_height.set(new_height)
+
 
         
             
@@ -327,7 +333,11 @@ class UI():
             modifiers = Modifiers() # 
 
             if SequenceData.toggle.get() == 0:
-                result = fp.write_mcfunction_file(ParticlesCache.DataParticlesCloud,OutputData.path,os.path.splitext(os.path.basename(InputData.path))[0].lower(),modifiers)
+                try: # Try to get the output name from the current frame
+                    output_name = os.path.splitext(os.path.basename(InputData.sequence_files[PygameData.frame.get()]["path"]))[0].lower()
+                except: # If no frames where detected, default to the input file name
+                    output_name = os.path.splitext(os.path.basename(InputData.path))[0].lower()
+                result = fp.write_mcfunction_file(ParticlesCache.DataParticlesCloud,OutputData.path,output_name,modifiers)
                 if sv.DEBUG == True:
                     print(result)
             else:
@@ -419,6 +429,7 @@ class UI():
             """
             Verify that the start sequence value is valid (i.e. within the range of the detected sequence and less than the end value), and correct it.
             """
+            if event.widget.cget("state") == "disabled": return
             try :
                 value = int(SequenceData.start.get())
                 if value >= int(SequenceData.end.get()):
@@ -435,6 +446,7 @@ class UI():
             """
             Verify that the end sequence value is valid (i.e. within the range of the detected sequence and more than the start value), and correct it.
             """
+            if event.widget.cget("state") == "disabled": return
             try :
                 value = int(SequenceData.end.get())
                 if value <= int(SequenceData.start.get()):
@@ -548,6 +560,136 @@ class UI():
         model_size_ratio_button_1.grid(column=2, row=1, padx=0, pady=0,sticky="nw")
         model_size_ratio_button_2.grid(column=4, row=1, padx=0, pady=0,sticky="nw")
         
+        def verify_image_entries(type: str, dim: str):
+            if sv.DEBUG:
+                print("Verifying :" + type + " " + dim)
+
+            
+            
+            if type == "resolution":
+                lock_ratio = ImageData.lock_resolution_ratio
+                if dim == "width":
+                    tested_var = ImageData.width_resolution
+                    tested_old_var = ImageData.old_width_resolution
+                    default = InputData.image_resolution_width
+                elif dim == "height":
+                    tested_var = ImageData.height_resolution
+                    tested_old_var = ImageData.old_height_resolution
+                    default = InputData.image_resolution_height
+            elif type == "size":
+                lock_ratio = ImageData.lock_size_ratio
+                if dim == "width":
+                    tested_var = ImageData.width
+                    tested_old_var = ImageData.old_width
+                    default = UI.round_float_to_int(InputData.image_resolution_width / float(ImageData.width_density.get()))
+                elif dim == "height":
+                    tested_var = ImageData.height
+                    tested_old_var = ImageData.old_height
+                    default = UI.round_float_to_int(InputData.image_resolution_height / float(ImageData.height_density.get()))
+            elif type == "density":
+                lock_ratio = ImageData.lock_size_ratio
+                if dim == "width":
+                    tested_var = ImageData.width_density
+                    tested_old_var = ImageData.old_width_density
+                    default = ImageData.default_width_density
+                elif dim == "height":
+                    tested_var = ImageData.height_density
+                    tested_old_var = ImageData.old_height_density
+                    default = ImageData.default_height_density
+            else:
+                raise Exception("Invalid type")
+
+            
+            
+            try: # Try to convert the entry to a number
+                new_value = UI.round_float_to_int(float(numexpr.evaluate(tested_var.get())))
+                if type == "resolution": # Resolution is necessarily a integer
+                    new_value = round(new_value)
+            except: # If the entry is invalid, reset to default
+                if sv.DEBUG: print("Invalid entry")
+                new_value = UI.round_float_to_int(default)
+
+            finally: # Finally, update the variable to the result (rounded and eventually result of the operation)
+                old_value = float(tested_old_var.get())
+                tested_var.set(old_value) # Reset the tested_value so it is not multiplied twice
+                multiplier = new_value / old_value # Calculate the multiplier
+
+                if not lock_ratio: # If the ratio is not locked
+                    if type == "size":
+                        if dim == "width":
+                            linked_var = ImageData.width_density
+                            linked_var_old = ImageData.old_width_density
+                        elif dim == "height":
+                            linked_var = ImageData.height_density
+                            linked_var_old = ImageData.old_height_density
+                    elif type == "density":
+                        if dim == "width":
+                            linked_var = ImageData.width
+                            linked_var_old = ImageData.old_width
+                        elif dim == "height":
+                            linked_var = ImageData.height
+                            linked_var_old = ImageData.old_height
+                    
+                    new_var_value = UI.round_float_to_int(float(tested_var.get()) * multiplier) # Calculate the tested entry
+                    new_linked_var_value = UI.round_float_to_int(float(linked_var.get()) / multiplier) # Calculate the linked entry
+                    tested_var.set(new_var_value) # Update the tested entry
+                    tested_old_var.set(new_var_value)
+                    linked_var.set(new_linked_var_value) # Update the linked entry
+                    linked_var_old.set(new_linked_var_value)
+
+
+                else: # If the ratio is locked
+                    # Update the linked entries accordingly
+                    if type == "size":
+                        # Scale size
+                        new_width = UI.round_float_to_int(float(ImageData.width.get()) * multiplier)
+                        new_height = UI.round_float_to_int(float(ImageData.height.get()) * multiplier)
+                        ImageData.width.set(new_width)
+                        ImageData.height.set(new_height)
+                        ImageData.old_width.set(new_width)
+                        ImageData.old_height.set(new_height)
+
+                        # Scale density
+                        new_width_density = UI.round_float_to_int(float(ImageData.width_density.get()) / multiplier)
+                        new_height_density = UI.round_float_to_int(float(ImageData.height_density.get()) / multiplier)
+                        ImageData.width_density.set(new_width_density)
+                        ImageData.height_density.set(new_height_density)
+                        ImageData.old_width_density.set(new_width_density)
+                        ImageData.old_height_density.set(new_height_density)
+                    
+                    elif type == "density":
+                        # Scale density
+                        new_width_density = UI.round_float_to_int(float(ImageData.width_density.get()) * multiplier)
+                        new_height_density = UI.round_float_to_int(float(ImageData.height_density.get()) * multiplier)
+                        ImageData.width_density.set(new_width_density)
+                        ImageData.height_density.set(new_height_density)
+                        ImageData.old_width_density.set(new_width_density)
+                        ImageData.old_height_density.set(new_height_density)
+
+                        # Scale size
+                        new_width = UI.round_float_to_int(float(ImageData.width.get()) / multiplier)
+                        new_height = UI.round_float_to_int(float(ImageData.height.get()) / multiplier)
+                        ImageData.width.set(new_width)
+                        ImageData.height.set(new_height)
+                        ImageData.old_width.set(new_width)
+                        ImageData.old_height.set(new_height)
+                    
+
+                    elif type == "resolution":
+                        # Scale resolution
+                        new_width_resolution = round(float(ImageData.width_resolution.get()) * multiplier)
+                        new_height_resolution = round(float(ImageData.height_resolution.get()) * multiplier)
+                        ImageData.width_resolution.set(new_width_resolution) 
+                        ImageData.height_resolution.set(new_height_resolution)
+                        ImageData.old_width_resolution.set(new_width_resolution)
+                        ImageData.old_height_resolution.set(new_height_resolution)
+                    
+                        # Update the particle cloud
+                        UI.update_particles_cloud()
+
+
+            PygameTempData.update_requested += 1
+
         def verify_model_entries(dim: str):
             if sv.DEBUG:
                 print("Verifying :" + dim)
@@ -555,8 +697,6 @@ class UI():
             
         
             lock_ratio = ModelData.lock_size_ratio
-            height_ratio = ModelData.height_ratio
-            depth_ratio = ModelData.depth_ratio
             if dim == "width":
                 tested_var = ModelData.width
                 old_value = ModelData.old_width
@@ -576,8 +716,6 @@ class UI():
                 return int(float) if float.is_integer() else float
             
             
-
-
             try: # Try to convert the entry to a number
                 new_value = round_float_to_int(float(numexpr.evaluate(tested_var.get())))
             except: # If the entry is invalid, reset to default
@@ -586,12 +724,13 @@ class UI():
 
             finally: # Finally, update the variable to the result (rounded and eventually result of the operation)
                 tested_var.set(new_value) # Update the tested entry to the formatted value
-                multiplier = new_value / old_value
-                width = float(ModelData.width.get())
-                height = float(ModelData.height.get())
-                depth = float(ModelData.depth.get())
 
-                if lock_ratio == True:
+                if lock_ratio == True: # If the ratio is locked
+                    multiplier = new_value / old_value # Calculate the multiplier
+                    width = float(ModelData.width.get())
+                    height = float(ModelData.height.get())
+                    depth = float(ModelData.depth.get())
+                    # Update the linked entries accordingly
                     if dim == "width":
                         ModelData.height.set(height * multiplier)
                         ModelData.depth.set(depth * multiplier)
@@ -601,13 +740,13 @@ class UI():
                     elif dim == "depth":
                         ModelData.width.set(width * multiplier)
                         ModelData.height.set(height * multiplier)
+
+                # Update the old values
                 ModelData.old_width = width
                 ModelData.old_height = height
                 ModelData.old_depth = depth
 
-                
-
-            PygameTempData.update_requested += 1
+                PygameTempData.update_requested += 1
         
         def verify_model_width_entry(_):
             UI.verify_model_entries("width")
@@ -651,10 +790,10 @@ class UI():
 
 
         def verify_image_width(event=None):
-            UI.verify_image_entries(type= "image_size", dim= "X",widget=event.widget)
+            UI.verify_image_entries(type= "size", dim= "width")
 
         def verify_image_height(event=None):
-            UI.verify_image_entries(type= "image_size", dim= "Y",widget=event.widget)
+            UI.verify_image_entries(type= "size", dim= "height")
 
         def lock_image_size_ratio():
             if sv.DEBUG == True:
@@ -668,6 +807,8 @@ class UI():
 
         ImageData.width = customtkinter.StringVar(value=ImageData.width)
         ImageData.height = customtkinter.StringVar(value=ImageData.height)
+        ImageData.old_width = customtkinter.StringVar(value=ImageData.old_width)
+        ImageData.old_height = customtkinter.StringVar(value=ImageData.old_height)
         image_width_entry = customtkinter.CTkEntry(image_frame, **Styles.normal_entry_style,textvariable=ImageData.width,font=Styles.InterFont,justify="center")
         image_height_entry = customtkinter.CTkEntry(image_frame, **Styles.normal_entry_style,textvariable=ImageData.height,font=Styles.InterFont,justify="center")
         image_width_entry.bind("<FocusOut>", verify_image_width)
@@ -679,31 +820,30 @@ class UI():
         size_X_label = customtkinter.CTkLabel(image_frame, text="X",text_color=Styles.white,font=("Inter", 20))
 
         def verify_density_x_entry(event):
-            UI.verify_image_entries(type="image_density", dim="X",widget=event.widget)
+            UI.verify_image_entries(type="density", dim="width")
 
         def verify_density_y_entry(event):
-            UI.verify_image_entries(type="image_density", dim="Y",widget=event.widget)
+            UI.verify_image_entries(type="density", dim="height")
 
         density_label = customtkinter.CTkLabel(image_frame, text="Density",text_color=Styles.light_gray,font=Styles.InterFont)
         density_tooltip = CTkToolTip.CTkToolTip(density_label, message= "Define the size automatically using density (particles per block)",bg_color= Styles.light_gray, text_color= Styles.black, border_width=10,border_color= Styles.light_gray, alpha= 1, delay= 0, x_offset= -170, y_offset= 30, justify= "center",font= Styles.InterFont)
+        
         ImageData.width_density = customtkinter.StringVar(value=ImageData.width_density)
+        ImageData.height_density = customtkinter.StringVar(value=ImageData.height_density)
+        ImageData.old_width_density = customtkinter.StringVar(value=ImageData.old_width_density)
+        ImageData.old_height_density = customtkinter.StringVar(value=ImageData.old_height_density)
+        
         width_density_entry = customtkinter.CTkEntry(image_frame, **Styles.normal_entry_style,textvariable=ImageData.width_density,font=Styles.InterFont,justify="center")
+        height_density_entry = customtkinter.CTkEntry(image_frame, **Styles.normal_entry_style,textvariable=ImageData.height_density,font=Styles.InterFont,justify="center")
+        
         width_density_entry.bind("<FocusOut>", verify_density_x_entry)
         width_density_entry.bind("<Return>", verify_density_x_entry)
-        ImageData.height_density = customtkinter.StringVar(value=ImageData.height_density)
-        height_density_entry = customtkinter.CTkEntry(image_frame, **Styles.normal_entry_style,textvariable=ImageData.height_density,font=Styles.InterFont,justify="center")
         height_density_entry.bind("<FocusOut>", verify_density_y_entry)
         height_density_entry.bind("<Return>", verify_density_y_entry)
 
         image_resolution_label = customtkinter.CTkLabel(image_frame, text="Resolution",text_color=Styles.light_gray,font=Styles.InterFont)
 
-        # ImageData.resolution = customtkinter.StringVar(value=ImageData.resolution[0]),customtkinter.StringVar(value=ImageData.resolution[1])
-        def update_image_resolution():
-            if sv.DEBUG:
-                print("Updating image resolution",ImageData.resolution_x.get(),ImageData.resolution_y.get())
-            # UI.verify_image_resolution_X()
-            # UI.verify_image_resolution_Y()
-            UI.update_particles_cloud()
+
 
         def lock_image_resolution_ratio():
             if sv.DEBUG == True:
@@ -718,13 +858,14 @@ class UI():
             
 
         # Image resolution variable that is not directly updating the shared variables (until verified)
-        ImageData.resolution_x, ImageData.resolution_y = customtkinter.StringVar(value=ImageData.resolution_x), customtkinter.StringVar(value=ImageData.resolution_y)
-        image_resolution_width_entry = customtkinter.CTkEntry(image_frame, **Styles.normal_entry_style,textvariable=ImageData.resolution_x,font=Styles.InterFont,justify="center")
-        image_resolution_height_entry = customtkinter.CTkEntry(image_frame, **Styles.normal_entry_style,textvariable=ImageData.resolution_y,font=Styles.InterFont,justify="center")
+        ImageData.width_resolution, ImageData.height_resolution = customtkinter.StringVar(value=ImageData.width_resolution), customtkinter.StringVar(value=ImageData.height_resolution)
+        ImageData.old_width_resolution, ImageData.old_height_resolution = customtkinter.StringVar(value=ImageData.old_width_resolution), customtkinter.StringVar(value=ImageData.old_height_resolution)
+        image_resolution_width_entry = customtkinter.CTkEntry(image_frame, **Styles.normal_entry_style,textvariable=ImageData.width_resolution,font=Styles.InterFont,justify="center")
+        image_resolution_height_entry = customtkinter.CTkEntry(image_frame, **Styles.normal_entry_style,textvariable=ImageData.height_resolution,font=Styles.InterFont,justify="center")
         
         lock_resolution_ratio_toggle_button = customtkinter.CTkButton(image_frame,command=lock_image_resolution_ratio, image = link_close_button_image, text=None,width=0,**Styles.ratio_button_style)
         resolution_X_label = customtkinter.CTkLabel(image_frame, text="X",text_color=Styles.white,font=("Inter", 20))
-        update_image_resolution_button = customtkinter.CTkButton(image_frame,command=update_image_resolution, text="Update",width=0,**Styles.normal_button_style)
+        # update_image_resolution_button = customtkinter.CTkButton(image_frame,command=update_image_resolution, text="Update",width=0,**Styles.normal_button_style)
         # sv.image_resize_boolean = tk.IntVar(value=sv.image_resize_boolean)
         # image_resize_checkbox = customtkinter.CTkCheckBox(image_frame,variable=sv.image_resize_boolean,command=None, text="Resize", onvalue=True, offvalue=False,**Styles.checkbox_style)
 
@@ -747,13 +888,13 @@ class UI():
         height_density_entry.grid(column=3, row=2, padx=15, pady=0)
 
         def verify_image_resolution_X(event=None):
-            UI.verify_image_entries(type="image_resolution", dim="X", widget=event.widget)
+            UI.verify_image_entries(type="resolution", dim="width")
 
         def verify_image_resolution_Y(event=None):
-            UI.verify_image_entries(type="image_resolution", dim="Y", widget=event.widget)
+            UI.verify_image_entries(type="resolution", dim="height")
 
 
-        def verify_image_entries(type: str, dim: str, widget: tk.Widget = None):
+        def verify_image_entries_old(type: str, dim: str, widget: tk.Widget = None):
             if sv.DEBUG:
                 print("Verifying :" + type + " " + dim)
             if widget is not None:
@@ -764,24 +905,24 @@ class UI():
                 lock_ratio = ImageData.lock_resolution_ratio
                 ratio = ImageData.resolution_ratio
                 if dim == "X":
-                    tested_var = ImageData.resolution_x
-                    linked_var = ImageData.resolution_y
-                    default = InputData.image_resolution_x
+                    tested_var = ImageData.width_resolution
+                    linked_var = ImageData.height_resolution
+                    default = InputData.image_resolution_width
                 elif dim == "Y":
-                    tested_var = ImageData.resolution_y
-                    linked_var = ImageData.resolution_x
-                    default = InputData.image_resolution_y
+                    tested_var = ImageData.height_resolution
+                    linked_var = ImageData.width_resolution
+                    default = InputData.image_resolution_height
             elif type == "image_size":
                 lock_ratio = ImageData.lock_size_ratio
                 ratio = ImageData.size_ratio
                 if dim == "X":
                     tested_var = ImageData.width
                     linked_var = ImageData.height
-                    default = InputData.image_resolution_x / float(ImageData.width_density.get())
+                    default = InputData.image_resolution_width / float(ImageData.width_density.get())
                 elif dim == "Y":
                     tested_var = ImageData.height
                     linked_var = ImageData.width
-                    default = InputData.image_resolution_y / float(ImageData.height_density.get())
+                    default = InputData.image_resolution_height / float(ImageData.height_density.get())
             elif type == "image_density":
                 lock_ratio = ImageData.lock_size_ratio
                 ratio = ImageData.size_ratio
@@ -823,22 +964,24 @@ class UI():
                         linked_var.set(new_linked_value)
                 else: # If the ratio is not locked, update the ratio
                     if type == "image_resolution":
-                        ImageData.resolution_ratio = int(ImageData.resolution_x.get()) / int(ImageData.resolution_y.get()) 
+                        ImageData.resolution_ratio = int(ImageData.width_resolution.get()) / int(ImageData.height_resolution.get()) 
                     elif type == "image_size":
                         ImageData.size_ratio = float(ImageData.width.get()) / float(ImageData.height.get())
                     elif type == "image_density":
                         ImageData.size_ratio = float(ImageData.width_density.get()) / float(ImageData.height_density.get())
 
                 if type == "image_density":
-                    ImageData.width.set(round_float_to_int(float(InputData.image_resolution_x / float(ImageData.width_density.get()))))
-                    ImageData.height.set(round_float_to_int(float(InputData.image_resolution_y / float(ImageData.height_density.get()))))
+                    ImageData.width.set(round_float_to_int(float(InputData.image_resolution_width / float(ImageData.width_density.get()))))
+                    ImageData.height.set(round_float_to_int(float(InputData.image_resolution_height / float(ImageData.height_density.get()))))
                 elif type == "image_size":
-                    ImageData.width_density.set(round_float_to_int(float(InputData.image_resolution_x / float(ImageData.width.get()))))
-                    ImageData.height_density.set(round_float_to_int(float(InputData.image_resolution_y / float(ImageData.height.get()))))
+                    ImageData.width_density.set(round_float_to_int(float(InputData.image_resolution_width / float(ImageData.width.get()))))
+                    ImageData.height_density.set(round_float_to_int(float(InputData.image_resolution_height / float(ImageData.height.get()))))
                 elif type == "image_resolution":
                     UI.update_image_resolution()
 
             PygameTempData.update_requested += 1
+
+        
 
 
 
@@ -876,9 +1019,10 @@ class UI():
 
         ParticleData.viewmode = tk.StringVar(value=ParticleData.viewmode)
         particle_mode_menu = customtkinter.CTkOptionMenu(particle_frame, **Styles.normal_menu_style,variable=ParticleData.viewmode, values=["Force", "Normal"],font=Styles.InterFont)
-        particle_mode_label = customtkinter.CTkLabel(particle_frame, text="Particle Type",text_color=Styles.light_gray,font=Styles.InterFont)
+        particle_mode_label = customtkinter.CTkLabel(particle_frame, text="View mode",text_color=Styles.light_gray,font=Styles.InterFont)
 
-        particle_viewer_entry = customtkinter.CTkEntry(particle_frame, **Styles.normal_entry_style,textvariable=customtkinter.StringVar(value="@a"),font=Styles.InterFont)
+        ParticleData.viewer = tk.StringVar(value=ParticleData.viewer)
+        particle_viewer_entry = customtkinter.CTkEntry(particle_frame, **Styles.normal_entry_style,textvariable=ParticleData.viewer,font=Styles.InterFont)
         particle_viewer_label = customtkinter.CTkLabel(particle_frame, text="Viewer",text_color=Styles.light_gray,font=Styles.InterFont)
 
         sv.particle_color_boolean = tk.IntVar(value=sv.particle_color_boolean)
