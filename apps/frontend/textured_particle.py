@@ -23,7 +23,7 @@ class TexturedParticle():
             texture = pg.transform.scale(texture, self.size)
         self.rect = texture.get_rect()
         if color is not None:
-            self.surface = pg.Surface(self.size).convert_alpha().premul_alpha_ip() # Create an empty RGBA image with the same size as the texture
+            self.surface = pg.Surface(self.size).convert_alpha() # Create an empty RGBA image with the same size as the texture
             self.surface.fill(color) # Fill it with the desired color
             self.surface.blit(texture, (0,0), special_flags=pg.BLEND_RGBA_MULT)
         else:
@@ -71,10 +71,10 @@ class TexturedParticlesCloud:
                 if scale <= 0.1 :
                     scale = 0.1
                 scaled_particle = pg.transform.scale_by(particle.surface, scale)
-                position = np.add(sorted_positions[index], np.divide(scaled_particle.size,-2))
+                position = np.add(sorted_positions[index], np.divide(scaled_particle.get_size(),-2))
                 # position = np.add(sorted_positions[index], -scale / 2)
                 # self.render.screen.blit(scaled_particle, position)
                 blits_sequence.append((scaled_particle, position))
 
-        self.render.screen.fblits(blits_sequence)
+        self.render.screen.blits(blits_sequence)
                 

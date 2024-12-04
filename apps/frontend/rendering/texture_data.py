@@ -20,10 +20,10 @@ def load_textures() -> dict:
 
     # Load solo textures
     for name,data in solo_textures_data.items():
-        solo_textures[name] = pg.image.load(data['file_path']).convert_alpha().premul_alpha_ip()
+        solo_textures[name] = pg.image.load(data['file_path']).convert_alpha()
     # Load spritesheet textures
     for name,data in spritesheet_textures_data.items():
-        spritesheet_textures[name] = pg.image.load(data['file_path']).convert_alpha().premul_alpha_ip()
+        spritesheet_textures[name] = pg.image.load(data['file_path']).convert_alpha()
 
 def load_spritesheet_animations():
     global animation_textures
@@ -38,7 +38,7 @@ def load_spritesheet_animations():
 
 
 def get_spritesheet_frame(spritesheet, pos_x, pos_y, width, height, scale):
-    image = pg.Surface((width, height), pg.SRCALPHA).convert_alpha().premul_alpha_ip()
+    image = pg.Surface((width, height), pg.SRCALPHA).convert_alpha()
     image.blit(spritesheet, (0, 0), (pos_x, pos_y, width, height))
     image = pg.transform.scale(image, (width * scale, height * scale))
     return image
