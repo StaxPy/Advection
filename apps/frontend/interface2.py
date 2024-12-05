@@ -109,65 +109,100 @@ class UI():
                 print("User exited file dialog without selecting a file")
                 return
             fd.update_json_memory("input_path",os.path.dirname(dialog_result)) # Update the JSON file
+            UI.try_update_input(dialog_result, reset_image_size=True)
 
-            UI.update_input(dialog_result)
+        def try_update_input(input_path, reset_image_size=False):
+            """
+            Tries to update the particles cloud with the given input path.
 
-        def update_input(input_path):
-            InputData.extension = os.path.splitext(input_path)[1] # Update the global input extension
+            If it succeeds, it updates the interface and shared variables to the correct mode (model or image).
+            """
+            if sv.DEBUG:
+                print("try_update_input")
+            try:
+                UI.update_particles_cloud(input_path) # Try to generate a new cloud
+            except Exception as e:
+                print(f"{e}, Updating canceled")
+            else :
+                print("Cloud updated")
+                InputData.path = input_path # Update the global input path
+                InputData.extension = os.path.splitext(input_path)[1] # Update the global input extension
 
-            # Update the global input mode
-            if InputData.extension == ".obj":
-                InputData.mode = "model"
-                UI.image_frame.grid_forget()
-                UI.model_frame.grid(row = 3, column = 0,sticky="nsew",pady=5,padx=10)
-                PygameTempData.update_requested += 1
-            elif InputData.extension == ".png" or InputData.extension == ".jpg" or InputData.extension == ".jpeg":
-                InputData.mode = "image"
-                UI.model_frame.grid_forget()
-                UI.image_frame.grid(row = 3, column = 0,sticky="nsew",pady=5,padx=10)
-                PygameTempData.update_requested += 1
-            else:
-                return # Return if the extension is not supported
+                # Update the global input mode
+                if InputData.extension == ".obj":
+                    InputData.mode = "model"
+                    UI.image_frame.grid_forget()
+                    UI.model_frame.grid(row = 3, column = 0,sticky="nsew",pady=5,padx=10)
+                    PygameTempData.update_requested += 1
+                elif InputData.extension == ".png" or InputData.extension == ".jpg" or InputData.extension == ".jpeg":
+                    InputData.mode = "image"
+                    if reset_image_size:
+                        width = InputData.image_resolution_width
+                        height = InputData.image_resolution_height
+                        print("reset",width, height)
+                        ImageData.width_resolution.set(width)
+                        ImageData.height_resolution.set(height)
+                        ImageData.old_width_resolution.set(width)
+                        ImageData.old_height_resolution.set(height)
+                        ImageData.resolution_ratio = width/height
+                        ImageData.size_ratio = width/height
+                    UI.model_frame.grid_forget()
+                    UI.image_frame.grid(row = 3, column = 0,sticky="nsew",pady=5,padx=10)
+                    PygameTempData.update_requested += 1
+                else:
+                    return # Return if the extension is not supported
+                
+
+                UI.input_path_entry.cget("textvariable").set(input_path) # Update the input path display
+                fd.find_file_sequence(input_path) # Search for frames
+
+                # UI Update
+
+
+                UI.update_alignment_section() # Update the alignment section
+                UI.update_sequence_section() # Update the sequence section
+                UI.update_preview_frame_section() # Update the preview frame section
+
+
+
+
+                
+                UI.reset_image_size() # Update the image size
+                UI.reset_model_resize() # Update the model resize
             
+
+
+        def update_particles_cloud(input_path=None):
+            """
+            Attemps to create a new DataParticlesCloud and TexturedParticlesCloud.
+
+            If the sequence toggle is on, the fle is the current frame, otherwise it is the input file.
+
+            If it succeeds, it refreshes the cloud stats and requests a renderer update.
+            Parameters:
+                input_path: The path to the input file.
+            """
             
-            InputData.path = input_path # Update the global input path
-            UI.input_path_entry.cget("textvariable").set(input_path) # Update the input path display
-            fd.find_file_sequence(input_path) # Search for frames
-
-            # UI Update
-
-
-            UI.update_alignment_section() # Update the alignment section
-            UI.update_sequence_section() # Update the sequence section
-            UI.update_preview_frame_section() # Update the preview frame section
-
-            # Cloud Update
-            ImageData.reset_to_input = True # Ask to reset image data on next cloud generation
-
-            UI.update_particles_cloud() # Generate a new cloud
-            
-            UI.reset_image_size() # Update the image size
-            UI.reset_model_resize() # Update the model resize
-            
-
-
-        def update_particles_cloud():
             if sv.DEBUG:
                 print("update_particles_cloud")
-            path = InputData.path # Charge default path
+
+            if input_path == None: # If no path is given
+                input_path = InputData.path # Use the stored input path
 
             if SequenceData.toggle.get() == 1: # If the sequence toggle is on
-                path = InputData.sequence_files[int(PygameData.frame.get())]["path"] # Change the path to the selected frame
+                input_path = InputData.sequence_files[int(PygameData.frame.get())]["path"] # Change the path to the selected frame
 
-            if InputData.path: # If the path is not None
-                try:
-                    ParticlesCache.DataParticlesCloud = fp.create_DataParticlesCloud_from_file(path) # Create the DataParticlesCloud
-                except:
-                    raise Exception("Error while creating DataParticlesCloud from file")
-                else: 
-                    ParticlesCache.TexturedParticlesCloud = PygameData.PygameRenderer.DataParticlesCloud_to_TexturedParticlesCloud(ParticlesCache.DataParticlesCloud) # Create the TexturedParticlesCloud
-                    PygameData.PygameRenderer.refresh_cloud_stats()
-                    PygameTempData.update_requested += 2
+            try:
+                newDataParticlesCloud = fp.create_DataParticlesCloud_from_file(input_path) # Create the DataParticlesCloud
+            except Exception as e:
+                # print("Error while creating DataParticlesCloud from file")
+                raise Exception("Error while creating DataParticlesCloud from file",e)
+            else: 
+                ParticlesCache.DataParticlesCloud = newDataParticlesCloud
+                ParticlesCache.TexturedParticlesCloud = PygameData.PygameRenderer.DataParticlesCloud_to_TexturedParticlesCloud(ParticlesCache.DataParticlesCloud) # Create the TexturedParticlesCloud
+                PygameData.PygameRenderer.refresh_cloud_stats()
+                PygameTempData.update_requested += 2
+            
 
 
         def reset_model_resize():
@@ -182,6 +217,13 @@ class UI():
             ModelData.old_depth = depth
 
         def reset_image_size():
+            """
+            Resets the image size based on the input resolution and image density.
+            The new image size is calculated by dividing the input resolution by the image density.
+            The image size is then set to the new value.
+            """
+            if sv.DEBUG:
+                print("reset_image_size")
             # Resets the image size
             def round_float_to_int(float):
                 return int(float) if float.is_integer() else float
@@ -195,6 +237,7 @@ class UI():
             ImageData.height.set(new_width)
             ImageData.old_width.set(new_width)
             ImageData.old_height.set(new_height)
+
 
 
         
@@ -293,10 +336,14 @@ class UI():
 
 
         def ask_color():
-            pick_color = CTkColorPicker.AskColor(bg_color=Styles.dark_gray,fg_color=Styles.dark_gray,button_color=Styles.medium_gray,button_hover_color=Styles.hover_color,corner_radius=10) # open the color picker
+            current_color = ParticleData.force_color.get()
+            pick_color = CTkColorPicker.AskColor(initial_color=current_color,bg_color=Styles.dark_gray,fg_color=Styles.dark_gray,button_color=Styles.medium_gray,button_hover_color=Styles.hover_color,corner_radius=10) # open the color picker
             color = pick_color.get() # get the color string
-            UI.particle_color_button.configure(fg_color=color)
-            UI.particle_hexcode_entry.cget("textvariable").set(color)
+            if color != None:
+                UI.particle_color_button.configure(fg_color=color)
+                # UI.particle_hexcode_entry.cget("textvariable").set(color)
+                ParticleData.force_color.set(color)
+                ParticlesCache.TexturedParticlesCloud.refresh_colors()
 
         def slider_update_preview_frame(frame):
             PygameData.frame.set(frame)
@@ -608,11 +655,12 @@ class UI():
             except: # If the entry is invalid, reset to default
                 if sv.DEBUG: print("Invalid entry")
                 new_value = UI.round_float_to_int(default)
-
             finally: # Finally, update the variable to the result (rounded and eventually result of the operation)
                 old_value = float(tested_old_var.get())
                 tested_var.set(old_value) # Reset the tested_value so it is not multiplied twice
                 multiplier = new_value / old_value # Calculate the multiplier
+                print("Old value: " + str(old_value) + " New value: " + str(new_value))
+                print("Multiplier: " + str(multiplier))
 
                 if not lock_ratio: # If the ratio is not locked
                     if type == "size":
@@ -1025,10 +1073,14 @@ class UI():
         particle_viewer_entry = customtkinter.CTkEntry(particle_frame, **Styles.normal_entry_style,textvariable=ParticleData.viewer,font=Styles.InterFont)
         particle_viewer_label = customtkinter.CTkLabel(particle_frame, text="Viewer",text_color=Styles.light_gray,font=Styles.InterFont)
 
-        sv.particle_color_boolean = tk.IntVar(value=sv.particle_color_boolean)
-        particle_color_checkbox = customtkinter.CTkCheckBox(particle_frame,variable=sv.particle_color_boolean,command=None, text="ReColor", onvalue=True, offvalue=False,**Styles.checkbox_style)
+        def toggle_force_color():
+            ParticleData.force_color_toggle = not ParticleData.force_color_toggle
+            ParticlesCache.TexturedParticlesCloud.refresh_colors()
+
+        particle_color_checkbox = customtkinter.CTkCheckBox(particle_frame,variable=tk.IntVar(value=False),command=toggle_force_color, text="ReColor", onvalue=True, offvalue=False,**Styles.checkbox_style)
         particle_hexcode_label = customtkinter.CTkLabel(particle_frame, text="Hexcode",text_color=Styles.light_gray,font=Styles.InterFont)
-        particle_hexcode_entry = customtkinter.CTkEntry(particle_frame, **Styles.disabled_entry_style,textvariable=customtkinter.StringVar(value="#ff0000"),font=Styles.InterFont)
+        ParticleData.force_color = tk.StringVar(value=ParticleData.force_color)
+        particle_hexcode_entry = customtkinter.CTkEntry(particle_frame, **Styles.disabled_entry_style,textvariable=ParticleData.force_color,font=Styles.InterFont)
 
         particle_color_button = customtkinter.CTkButton(particle_frame, text=None,command = ask_color,fg_color=Styles.medium_gray,hover_color=Styles.hover_color,text_color=Styles.white,font=Styles.InterFont)
         
@@ -1108,11 +1160,12 @@ class UI():
         # preview_button = customtkinter.CTkButton(pygame_frame, text = 'preview',  command = refresh_preview,bg_color='black',fg_color='#7a7a7a',hover_color=Styles.hover_color,text_color=Styles.white)
         # preview_button.pack(side=tk.TOP, expand=False, padx=50, pady=10)
 
-        PygameData.toggle = tk.IntVar(value=sv.preview_boolean)
+        PygameData.toggle_render = tk.IntVar(value=PygameData.toggle_render)
         def toggle_preview():
+            
             PygameTempData.update_requested += 1
 
-        preview_toggle_checkbox = customtkinter.CTkCheckBox(preview_frame,text="Preview",text_color=Styles.white,command=toggle_preview, variable=PygameData.toggle,onvalue=True, offvalue=False,checkbox_width=20,checkbox_height=20,fg_color=Styles.light_gray,hover_color=Styles.hover_color,bg_color=Styles.almost_black,border_color=Styles.white,border_width=1)
+        preview_toggle_checkbox = customtkinter.CTkCheckBox(preview_frame,text="Preview",text_color=Styles.white,command=toggle_preview, variable=PygameData.toggle_render,onvalue=True, offvalue=False,checkbox_width=20,checkbox_height=20,fg_color=Styles.light_gray,hover_color=Styles.hover_color,bg_color=Styles.almost_black,border_color=Styles.white,border_width=1)
         preview_toggle_checkbox.pack(side=tk.RIGHT, expand=False, padx=0, pady=0)
 
 

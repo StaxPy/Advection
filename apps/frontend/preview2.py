@@ -67,9 +67,6 @@ class PygameRender:
 
         # self.grid = Grid(self, 10, 1.0) #Unused
 
-    def DataParticlesCloud_to_TexturedParticlesCloud(self, dataParticlesCloud):
-        """Converts a DataParticlesCloud instance to a TexturedParticlesCloud instance."""
-        return TexturedParticlesCloud(self, dataParticlesCloud, PygameData.texture)
 
     def draw_frame(self):
         # self.model.example_rotation()
@@ -81,7 +78,7 @@ class PygameRender:
         self.world_axes.draw()
         # self.test_texturedcloud.draw()
         if ParticlesCache.TexturedParticlesCloud:
-            ParticlesCache.TexturedParticlesCloud.draw()
+            ParticlesCache.TexturedParticlesCloud.draw(self)
         # self.grid.draw()
         # self.axes.example_rotation()
         # self.axes.translate([0.002, 0.002, 0.002])
@@ -146,11 +143,10 @@ class PygameRender:
 
 
     def render_new_frame(self):
-        #TODO : Render only 1 frame then freezebefore first camera movement.
 
         self.screen.fill(pg.Color('gray9'))
 
-        if PygameData.toggle.get() == 1:
+        if PygameData.toggle_render.get() == 1:
             self.draw_frame()
 
         self.screen.blit(self.cloud_size_display, (10, 30))
@@ -158,35 +154,29 @@ class PygameRender:
         fps_display = self.InterFont.render(f'FPS: {round(self.FPS)}', True, (255, 255, 255))
         self.screen.blit(fps_display, (10, 70))
 
-        
+        # self.test_index()
+        #self.test_animation_2()
 
-        
-        ''' TEST ANIMATION 1'''
-        # current_time = pg.time.get_ticks()
-        # if current_time - self.last_animation_update >= self.animation_cooldown:
-        #     self.animation_frame += 1
-        #     self.last_animation_update = current_time
-        #     if self.animation_frame >= len(td.animation_textures['dust']):
-        #         self.animation_frame = 0
-        
-        # # Show current frame
-        # self.screen.blit(pg.transform.scale(td.animation_textures['dust'][self.animation_frame], (64,64)), (100,300))
-
-        
-
-        ''' TEST ANIMATION 2 
-        # self.screen.blit(self.test_surface, (100,300),(0,self.test_index*8,8,8))
-        # self.test_index += 1
-        # if self.test_index >= 6:
-        #     self.test_index = 0
-        '''
-
-        # pg.display.set_caption(str(self.clock.get_fps()))
         pg.display.flip()
 
 
-        # self.clock.tick(self.FPS)
 
+    def test_animation_1(self):
+        current_time = pg.time.get_ticks()
+        if current_time - self.last_animation_update >= self.animation_cooldown:
+            self.animation_frame += 1
+            self.last_animation_update = current_time
+            if self.animation_frame >= len(td.animation_textures['dust']):
+                self.animation_frame = 0
+        
+        # Show current frame
+        self.screen.blit(pg.transform.scale(td.animation_textures['dust'][self.animation_frame], (64,64)), (100,300))
+
+    def test_animation_2(self):
+        self.screen.blit(self.test_surface, (100,300),(0,self.test_index*8,8,8))
+        self.test_index += 1
+        if self.test_index >= 6:
+            self.test_index = 0
 
     def inputs_and_events(self):
 
@@ -254,3 +244,6 @@ class PygameRender:
         
 
 
+    def DataParticlesCloud_to_TexturedParticlesCloud(self, dataParticlesCloud):
+        """Converts a DataParticlesCloud instance to a TexturedParticlesCloud instance."""
+        return TexturedParticlesCloud( dataParticlesCloud, PygameData.texture)

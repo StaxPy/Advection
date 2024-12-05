@@ -17,7 +17,6 @@ class sv():
     model_resize_boolean = 0
     image_resize_boolean = 0
     particle_type = "dust"
-    particle_color_boolean = 0
     autosize_boolean = 1
 
     data_particles = []
@@ -75,6 +74,7 @@ class PygameData():
     PygameRenderer = None
     frame = 0
     texture = None
+    toggle_render = 1
 
 class PygameTempData():
     toggle = 1
@@ -86,6 +86,7 @@ class InputData():
     path = None
     folder = None
     name = None
+    mode = None
     extension = None
     first_frame = 0
     last_frame = 0
@@ -121,6 +122,7 @@ class ModelData():
     old_width, old_height, old_depth = "0", "0", "0"
     
 class ImageData():
+    original_width, original_height = 0, 0
     default_width_density, default_height_density = 8, 8
     width_density, height_density = 8, 8
     old_width_density, old_height_density = 8, 8
@@ -129,7 +131,6 @@ class ImageData():
     old_width, old_height = 0, 0
     size_ratio = 0
     lock_size_ratio = True
-    reset_to_input = False
     width_resolution, height_resolution = 0, 0
     old_width_resolution, old_height_resolution = 0, 0
     resolution_ratio = 0
@@ -139,6 +140,8 @@ class ParticleData():
     size = 1.0
     viewmode = "Force"
     viewer="@a"
+    force_color = "#fcfcfc"
+    force_color_toggle = False
 
 class OutputData():
     path = None
@@ -150,7 +153,6 @@ class ParticlesCache():
 
 class Modifiers():
     def __init__(self):
-        
         self.mode = InputData.mode
         self.center = ParticlesCache.DataParticlesCloud.center
         self.size = [*ParticlesCache.DataParticlesCloud.size,1]

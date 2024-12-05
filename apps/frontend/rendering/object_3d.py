@@ -19,7 +19,7 @@ class Object3D:
         self.faces = faces if faces else []  # A list of faces, which are a list of vertex indices
         # self.translate([0.0001, 0.0001, 0.0001]) # Why ??
 
-        self.font = pg.font.SysFont('Inter', 30, bold=True)
+        self.font = pg.font.SysFont('Inter', 18, bold=True)
         self.color_faces = [(pg.Color('orange'), face) for face in self.faces]
         self.movement_flag, self.draw_vertices, self.draw_faces = True, True, False
         self.label = ''
@@ -75,8 +75,8 @@ class Object3D:
                 if all (vertices_visibility[i] for i in face):
                     pg.draw.polygon(self.render.screen, color, polygon, 1)
                     if self.label:
-                        text = self.font.render(self.label[index], True, pg.Color('white'))
-                        self.render.screen.blit(text, polygon[-1])
+                        text = self.font.render(self.label[index], True, pg.Color('gray30'))
+                        self.render.screen.blit(text, polygon[-1]+10)
 
         if self.draw_vertices:
             for index, vertex in enumerate(vertices):
@@ -107,9 +107,9 @@ class Axes(Object3D):
         super().__init__(render)
         self.vertices = np.array([
             (0, 0, 0, 1),  # vertex 0
-            (1, 0, 0, 1),  # vertex 1
-            (0, 1, 0, 1),  # vertex 2
-            (0, 0, 1, 1),  # vertex 3
+            (0.8, 0, 0, 1),  # vertex 1
+            (0, 0.8, 0, 1),  # vertex 2
+            (0, 0, 0.8, 1),  # vertex 3
         ])
         self.faces = np.array([
             (0, 1),  # face 0

@@ -3,6 +3,12 @@ import moderngl
 
 class HelloWorld2D:
     def __init__(self, ctx, reserve='4MB'):
+        """
+        Create a 2D rendering object.
+
+        :param ctx: moderngl.Context
+        :param reserve: Amount of memory to reserve for the vertex buffer. Default is '4MB'.
+        """
         self.ctx = ctx
         self.prog = self.ctx.program(
             vertex_shader='''
@@ -43,6 +49,13 @@ class HelloWorld2D:
         self.ctx.clear(*color)
 
     def plot(self, points, type='line'):
+        """
+        Renders a set of 2D points using the specified drawing type.
+
+        :param points: A numpy array of 2D points to be plotted.
+        :param type: The type of plot to render. Options are 'line' for a line strip or 'points' for individual points.
+        """
+
         data = points.astype('f4').tobytes()
         self.vbo.orphan()
         self.vbo.write(data)

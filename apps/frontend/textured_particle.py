@@ -30,9 +30,12 @@ class TexturedParticle():
             self.surface = texture
 
 class TexturedParticlesCloud:
-    def __init__(self, render, DataParticlesCloud, texture):
-        self.render = render
-        self.TexturedParticlesList = [(TexturedParticle(texture, DataParticle.position, DataParticle.color)) for DataParticle in DataParticlesCloud.DataParticlesList]
+    def __init__(self, DataParticlesCloud, texture):
+        self.texture = texture
+        if ParticleData.force_color_toggle:
+            self.TexturedParticlesList = [(TexturedParticle(self.texture, DataParticle.position, ParticleData.force_color.get())) for DataParticle in ParticlesCache.DataParticlesCloud.DataParticlesList]
+        else:
+            self.TexturedParticlesList = [(TexturedParticle(self.texture, DataParticle.position, DataParticle.color)) for DataParticle in ParticlesCache.DataParticlesCloud.DataParticlesList]        
         self.particle_positions = DataParticlesCloud.particle_positions
         self.min_pos = DataParticlesCloud.min_pos
         self.max_pos = DataParticlesCloud.max_pos
@@ -41,21 +44,27 @@ class TexturedParticlesCloud:
         self.count = DataParticlesCloud.count
         self.modifiers = Modifiers()
         
+    def refresh_colors(self):
+        if ParticleData.force_color_toggle:
+            self.TexturedParticlesList = [(TexturedParticle(self.texture, DataParticle.position, ParticleData.force_color.get())) for DataParticle in ParticlesCache.DataParticlesCloud.DataParticlesList]
+        else:
+            self.TexturedParticlesList = [(TexturedParticle(self.texture, DataParticle.position, DataParticle.color)) for DataParticle in ParticlesCache.DataParticlesCloud.DataParticlesList]
+        PygameTempData.update_requested += 1
     
-    def draw(self):
+    def draw(self,render):
         positions = self.particle_positions
         positions = apply_modifiers(positions, self.modifiers)
-        positions = positions @ self.render.camera.camera_matrix() # Apply camera matrix
+        positions = positions @ render.camera.camera_matrix() # Apply camera matrix
         depths = np.array([position[2] for position in positions], dtype=np.float64)
-        positions = positions @ self.render.projection.projection_matrix # Project on -1, 1 plane
+        positions = positions @ render.projection.projection_matrix # Project on -1, 1 plane
         positions /= positions[:, -1].reshape(-1, 1) # Normalize
 
         # MASK CLIPPING METHOD
-        visibility = np.array([(v[-2] >= self.render.camera.near_plane) and \
-                                (v[-2] <= self.render.camera.far_plane) and \
+        visibility = np.array([(v[-2] >= render.camera.near_plane) and \
+                                (v[-2] <= render.camera.far_plane) and \
                                 (inside_screen(v)) for v in positions], dtype=bool)
         
-        positions = positions @ self.render.projection.to_screen_matrix # Scale to screen size
+        positions = positions @ render.projection.to_screen_matrix # Scale to screen size
         positions = positions[:, :2] # Only keep x and y
 
         sorted_indices = np.argsort(-depths)
@@ -73,8 +82,8 @@ class TexturedParticlesCloud:
                 scaled_particle = pg.transform.scale_by(particle.surface, scale)
                 position = np.add(sorted_positions[index], np.divide(scaled_particle.get_size(),-2))
                 # position = np.add(sorted_positions[index], -scale / 2)
-                # self.render.screen.blit(scaled_particle, position)
+                # render.screen.blit(scaled_particle, position)
                 blits_sequence.append((scaled_particle, position))
 
-        self.render.screen.blits(blits_sequence)
+        render.screen.blits(blits_sequence)
                 
