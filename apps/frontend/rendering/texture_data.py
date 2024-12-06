@@ -2,6 +2,7 @@ import pygame as pg
 
 solo_textures_data = {
     'dust': {'file_path':'apps/frontend/assets/particle_dust.png'},
+    'effect': {'file_path':'apps/frontend/assets/particle_effect.png'},
 }
 
 spritesheet_textures_data = {

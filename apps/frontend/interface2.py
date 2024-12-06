@@ -109,7 +109,11 @@ class UI():
                 print("User exited file dialog without selecting a file")
                 return
             fd.update_json_memory("input_path",os.path.dirname(dialog_result)) # Update the JSON file
-            UI.try_update_input(dialog_result, reset_image_size=True)
+            if os.path.splitext(os.path.basename(dialog_result))[1] != "": # Check if the file has a name and extension
+                UI.try_update_input(dialog_result, reset_image_size=True)
+            else :
+                tk.messagebox.showerror("File name or extension is empty", "Please select another file.",icon="info")
+
 
         def try_update_input(input_path, reset_image_size=False):
             """
@@ -118,9 +122,10 @@ class UI():
             If it succeeds, it updates the interface and shared variables to the correct mode (model or image).
             """
             if sv.DEBUG:
-                print("try_update_input")
+                print("try_update_input",reset_image_size)
+
             try:
-                UI.update_particles_cloud(input_path) # Try to generate a new cloud
+                UI.update_particles_cloud(input_path, reset_image_size) # Try to generate a new cloud
             except Exception as e:
                 print(f"{e}, Updating canceled")
             else :
@@ -128,6 +133,7 @@ class UI():
                 InputData.path = input_path # Update the global input path
                 InputData.extension = os.path.splitext(input_path)[1] # Update the global input extension
 
+                print("extension",InputData.extension)
                 # Update the global input mode
                 if InputData.extension == ".obj":
                     InputData.mode = "model"
@@ -136,16 +142,6 @@ class UI():
                     PygameTempData.update_requested += 1
                 elif InputData.extension == ".png" or InputData.extension == ".jpg" or InputData.extension == ".jpeg":
                     InputData.mode = "image"
-                    if reset_image_size:
-                        width = InputData.image_resolution_width
-                        height = InputData.image_resolution_height
-                        print("reset",width, height)
-                        ImageData.width_resolution.set(width)
-                        ImageData.height_resolution.set(height)
-                        ImageData.old_width_resolution.set(width)
-                        ImageData.old_height_resolution.set(height)
-                        ImageData.resolution_ratio = width/height
-                        ImageData.size_ratio = width/height
                     UI.model_frame.grid_forget()
                     UI.image_frame.grid(row = 3, column = 0,sticky="nsew",pady=5,padx=10)
                     PygameTempData.update_requested += 1
@@ -169,10 +165,11 @@ class UI():
                 
                 UI.reset_image_size() # Update the image size
                 UI.reset_model_resize() # Update the model resize
+
             
 
 
-        def update_particles_cloud(input_path=None):
+        def update_particles_cloud(input_path=None, reset_image_data=False):
             """
             Attemps to create a new DataParticlesCloud and TexturedParticlesCloud.
 
@@ -193,7 +190,8 @@ class UI():
                 input_path = InputData.sequence_files[int(PygameData.frame.get())]["path"] # Change the path to the selected frame
 
             try:
-                newDataParticlesCloud = fp.create_DataParticlesCloud_from_file(input_path) # Create the DataParticlesCloud
+                modifiers = Modifiers()
+                newDataParticlesCloud = fp.create_DataParticlesCloud_from_file(input_path,modifiers, reset_image_data ) # Create the DataParticlesCloud
             except Exception as e:
                 # print("Error while creating DataParticlesCloud from file")
                 raise Exception("Error while creating DataParticlesCloud from file",e)
@@ -228,15 +226,20 @@ class UI():
             def round_float_to_int(float):
                 return int(float) if float.is_integer() else float
             
-            density = float(ImageData.width_density.get())
             ImageData.width_resolution.set(InputData.image_resolution_width)
+            ImageData.old_width_resolution.set(InputData.image_resolution_width)
             ImageData.height_resolution.set(InputData.image_resolution_height)
-            new_width = round_float_to_int(InputData.image_resolution_width/density)
-            new_height = round_float_to_int(InputData.image_resolution_height/density)
-            ImageData.width.set(new_width) # Init the image size
-            ImageData.height.set(new_width)
+            ImageData.old_height_resolution.set(InputData.image_resolution_height)
+            
+            width_density = float(ImageData.width_density.get())
+            height_density = float(ImageData.height_density.get())
+            new_width = round_float_to_int(InputData.image_resolution_width/width_density)
+            new_height = round_float_to_int(InputData.image_resolution_height/height_density)
+            ImageData.width.set(new_width)
+            ImageData.height.set(new_height)
             ImageData.old_width.set(new_width)
             ImageData.old_height.set(new_height)
+
 
 
 
@@ -392,7 +395,7 @@ class UI():
                     tk.messagebox.showerror("Single file", "Only one file was found in the sequence, exporting anyways. \n Make sure your files have the same name + number",icon="info")
                 
                 UI.export_button.configure(state="disabled")
-                multiprocessor = fmp.MultiProcessor_Progress(UI.TkApp,UI.export_button,modifiers)
+                multiprocessor = fmp.Sequence_Exporter_Progress(UI.TkApp,UI.export_button,modifiers)
                 multiprocessor.grab_set()
                 multiprocessor.transient(UI.TkApp)
 
@@ -659,9 +662,7 @@ class UI():
                 old_value = float(tested_old_var.get())
                 tested_var.set(old_value) # Reset the tested_value so it is not multiplied twice
                 multiplier = new_value / old_value # Calculate the multiplier
-                print("Old value: " + str(old_value) + " New value: " + str(new_value))
-                print("Multiplier: " + str(multiplier))
-
+ 
                 if not lock_ratio: # If the ratio is not locked
                     if type == "size":
                         if dim == "width":
@@ -725,12 +726,18 @@ class UI():
 
                     elif type == "resolution":
                         # Scale resolution
-                        new_width_resolution = round(float(ImageData.width_resolution.get()) * multiplier)
-                        new_height_resolution = round(float(ImageData.height_resolution.get()) * multiplier)
+                        new_width_resolution = max(round(float(ImageData.width_resolution.get()) * multiplier),8)
+                        new_height_resolution = max(round(float(ImageData.height_resolution.get()) * multiplier),8)
                         ImageData.width_resolution.set(new_width_resolution) 
                         ImageData.height_resolution.set(new_height_resolution)
                         ImageData.old_width_resolution.set(new_width_resolution)
                         ImageData.old_height_resolution.set(new_height_resolution)
+                        new_width =new_width_resolution/float(ImageData.width_density.get())
+                        new_height =new_height_resolution/float(ImageData.height_density.get())
+                        ImageData.width.set(new_width)
+                        ImageData.height.set(new_height)
+                        ImageData.old_width.set(new_width)
+                        ImageData.old_height.set(new_height)
                     
                         # Update the particle cloud
                         UI.update_particles_cloud()
@@ -942,97 +949,6 @@ class UI():
             UI.verify_image_entries(type="resolution", dim="height")
 
 
-        def verify_image_entries_old(type: str, dim: str, widget: tk.Widget = None):
-            if sv.DEBUG:
-                print("Verifying :" + type + " " + dim)
-            if widget is not None:
-                if widget.cget("state") == "disabled": # Skip if the widget is disabled
-                    return
-            
-            if type == "image_resolution":
-                lock_ratio = ImageData.lock_resolution_ratio
-                ratio = ImageData.resolution_ratio
-                if dim == "X":
-                    tested_var = ImageData.width_resolution
-                    linked_var = ImageData.height_resolution
-                    default = InputData.image_resolution_width
-                elif dim == "Y":
-                    tested_var = ImageData.height_resolution
-                    linked_var = ImageData.width_resolution
-                    default = InputData.image_resolution_height
-            elif type == "image_size":
-                lock_ratio = ImageData.lock_size_ratio
-                ratio = ImageData.size_ratio
-                if dim == "X":
-                    tested_var = ImageData.width
-                    linked_var = ImageData.height
-                    default = InputData.image_resolution_width / float(ImageData.width_density.get())
-                elif dim == "Y":
-                    tested_var = ImageData.height
-                    linked_var = ImageData.width
-                    default = InputData.image_resolution_height / float(ImageData.height_density.get())
-            elif type == "image_density":
-                lock_ratio = ImageData.lock_size_ratio
-                ratio = ImageData.size_ratio
-                if dim == "X":
-                    tested_var = ImageData.width_density
-                    linked_var = ImageData.height_density
-                    default = ImageData.default_density[0]
-                elif dim == "Y":
-                    tested_var = ImageData.height_density
-                    linked_var = ImageData.width_density
-                    default = ImageData.default_density[1]
-            else:
-                raise Exception("Invalid type")
-
-            def round_float_to_int(float):
-                return int(float) if float.is_integer() else float
-            
-            try: # Try to convert the entry to a number
-                new_value = round_float_to_int(float(numexpr.evaluate(tested_var.get())))
-                if type == "image_resolution":
-                    new_value = round(new_value)
-            except: # If the entry is invalid, reset to default
-                if sv.DEBUG: print("Invalid entry")
-                new_value = round_float_to_int(default)
-
-            finally: # Finally, update the variable to the result (rounded and eventually result of the operation)
-
-                tested_var.set(new_value) # Update the tested entry to the formatted value
-                if lock_ratio: # If the ratio is locked
-                    if dim == "X": # Update the Y dimension
-                        if sv.DEBUG: print("locked, updating linked_var to ",new_value,"/",ratio)
-                        new_linked_value = round_float_to_int(new_value/ratio)
-                        if type == "image_resolution": new_linked_value = round(new_linked_value)
-                        linked_var.set(new_linked_value)
-                    elif dim == "Y": # Update the X dimension
-                        if sv.DEBUG: print("locked, updating linked_var to ",new_value,"*",ratio)
-                        new_linked_value = round_float_to_int(new_value*ratio)
-                        if type == "image_resolution": new_linked_value = round(new_linked_value)
-                        linked_var.set(new_linked_value)
-                else: # If the ratio is not locked, update the ratio
-                    if type == "image_resolution":
-                        ImageData.resolution_ratio = int(ImageData.width_resolution.get()) / int(ImageData.height_resolution.get()) 
-                    elif type == "image_size":
-                        ImageData.size_ratio = float(ImageData.width.get()) / float(ImageData.height.get())
-                    elif type == "image_density":
-                        ImageData.size_ratio = float(ImageData.width_density.get()) / float(ImageData.height_density.get())
-
-                if type == "image_density":
-                    ImageData.width.set(round_float_to_int(float(InputData.image_resolution_width / float(ImageData.width_density.get()))))
-                    ImageData.height.set(round_float_to_int(float(InputData.image_resolution_height / float(ImageData.height_density.get()))))
-                elif type == "image_size":
-                    ImageData.width_density.set(round_float_to_int(float(InputData.image_resolution_width / float(ImageData.width.get()))))
-                    ImageData.height_density.set(round_float_to_int(float(InputData.image_resolution_height / float(ImageData.height.get()))))
-                elif type == "image_resolution":
-                    UI.update_image_resolution()
-
-            PygameTempData.update_requested += 1
-
-        
-
-
-
         image_resolution_width_entry.bind("<FocusOut>", verify_image_resolution_X)
         image_resolution_width_entry.bind("<Return>", verify_image_resolution_X)
         image_resolution_height_entry.bind("<FocusOut>", verify_image_resolution_Y)
@@ -1060,9 +976,13 @@ class UI():
         # particle_size_entry.bind("<FocusOut>", particle_size_slider_moved)
         # particle_size_entry.bind("<Return>", particle_size_slider_moved)
 
+        def change_particle_type(value):
+            print(value)
+            PygameData.PygameRenderer.set_particles_texture(value)
+            UI.update_particles_cloud(InputData.path)
         
-        sv.particle_type = tk.StringVar(value=sv.particle_type)
-        particle_type_menu = customtkinter.CTkOptionMenu(particle_frame, **Styles.normal_menu_style,variable=sv.particle_type, values=["dust", "effect"],font=Styles.InterFont)
+        ParticleData.particle_type = tk.StringVar(value=ParticleData.particle_type)
+        particle_type_menu = customtkinter.CTkOptionMenu(particle_frame, command= change_particle_type, **Styles.normal_menu_style,variable=ParticleData.particle_type, values=["dust", "effect"],font=Styles.InterFont)
         particle_type_label = customtkinter.CTkLabel(particle_frame, text="Particle Type",text_color=Styles.light_gray,font=Styles.InterFont)
 
         ParticleData.viewmode = tk.StringVar(value=ParticleData.viewmode)
@@ -1152,11 +1072,14 @@ class UI():
         preview_frame_slider.pack(side=tk.BOTTOM, expand=False, padx=0, pady=0)
 
 
+        def reset_camera_button_pressed():
+            PygameData.PygameRenderer.reset_camera()
+            
 
-        randomize_button = customtkinter.CTkButton(preview_frame, text = 'randomize',  command = None,bg_color='black',fg_color='#7a7a7a',hover_color=Styles.hover_color,text_color=Styles.white)
-        randomize_button.pack(side=tk.TOP, expand=False, padx=0, pady=0)
-        reset_camera_button = customtkinter.CTkButton(preview_frame, text = 'reset',  command = None,bg_color='black',fg_color='#7a7a7a',hover_color=Styles.hover_color,text_color=Styles.white)
-        reset_camera_button.pack(side=tk.TOP, expand=False, padx=0, pady=0)
+        # randomize_button = customtkinter.CTkButton(preview_frame, text = 'randomize',  command = None,bg_color='black',fg_color='#7a7a7a',hover_color=Styles.hover_color,text_color=Styles.white)
+        # randomize_button.pack(side=tk.TOP, expand=False, padx=0, pady=0)
+        reset_camera_button = customtkinter.CTkButton(preview_frame, text = 'Reset camera',  command = reset_camera_button_pressed,bg_color='black',fg_color=Styles.dark_gray,hover_color=Styles.hover_color,text_color=Styles.light_gray)
+        reset_camera_button.pack(side=tk.TOP, expand=False, padx=0, pady=10)
         # preview_button = customtkinter.CTkButton(pygame_frame, text = 'preview',  command = refresh_preview,bg_color='black',fg_color='#7a7a7a',hover_color=Styles.hover_color,text_color=Styles.white)
         # preview_button.pack(side=tk.TOP, expand=False, padx=50, pady=10)
 

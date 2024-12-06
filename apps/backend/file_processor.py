@@ -65,19 +65,19 @@ def create_cube_DataParticles():
     return DataParticlesCloud(DataParticlesList, (0, 0, 0), (1, 1, 1))
 
 
-def create_DataParticlesCloud_from_file(file_path):
+def create_DataParticlesCloud_from_file(file_path, modifiers, reset_image_data= False):
     print("create_DataParticlesCloud_from_file")
     
     if file_path.endswith('.obj'):
-        DataParticlesCloud = create_DataParticlesCloud_from_obj_file(file_path)
+        DataParticlesCloud = create_DataParticlesCloud_from_obj_file(file_path,modifiers)
     if file_path.endswith('.png') or file_path.endswith('.jpg') or file_path.endswith('.jpeg'):
-        DataParticlesCloud = create_DataParticlesCloud_from_image(file_path)
+        DataParticlesCloud = create_DataParticlesCloud_from_image(file_path,240, reset_image_data,modifiers)
 
     return DataParticlesCloud
 
 
 
-def create_DataParticlesCloud_from_obj_file(obj_file_path):
+def create_DataParticlesCloud_from_obj_file(obj_file_path, modifiers):
     print("create_DataParticlesCloud_from_obj_file")
     """Reads an OBJ file and extracts vertex positions, texture coordinates, faces, and materials.
        If `normalize=True`, scales the particle cloud to fit within a box of size `target_size`."""
@@ -147,7 +147,7 @@ def create_DataParticlesCloud_from_obj_file(obj_file_path):
     max_z = max(v[2] for v in vertices)
 
 
-    default_color = hex_to_rgb(ParticleData.force_color.get())
+    default_color = hex_to_rgb(modifiers.force_color)
     # Store particle positions and colors from the mesh data
     dataParticlesList = []
     for face, material in zip(faces, materials):
@@ -267,7 +267,7 @@ def write_mcfunction_file(input, output_path, output_name,modifiers):
 
     if isinstance(input,str):
         """Writes the particle commands to an MCFunction file using colors from the face centers."""
-        CurrentDataParticlesCloud = create_DataParticlesCloud_from_file(input)
+        CurrentDataParticlesCloud = create_DataParticlesCloud_from_file(input,modifiers)
     elif isinstance(input,DataParticlesCloud):
         CurrentDataParticlesCloud = input
     else:
@@ -284,17 +284,24 @@ def write_mcfunction_file(input, output_path, output_name,modifiers):
     count = 1
 
     positions = apply_alignment_modifiers(CurrentDataParticlesCloud.particle_positions, modifiers)
-    if ParticleData.force_color_toggle: # If force color toggle is enabled, use the force color for all particles
-        CurrentDataParticlesCloud.DataParticlesList = [DataParticle(position=position, color=(*hex_to_rgb(ParticleData.force_color.get()), 1)) for position in positions]
+    if modifiers.force_color_toggle: # If force color toggle is enabled, use the force color for all particles
+        CurrentDataParticlesCloud.DataParticlesList = [DataParticle(position=position, color=(*hex_to_rgb(modifiers.force_color), 1)) for position in positions]
     commands = []
+    particle_type = ParticleData.particle_type.get()
     for index, particle in enumerate(CurrentDataParticlesCloud.DataParticlesList):
         # Format the particle command with fixed decimal positions
         x, y, z, _ = positions[index]
         r, g, b, a = particle.color
-        commands.append(
-            f"particle dust{{color:[{r/255},{g/255},{b/255}],scale:{modifiers.particle_size}}} "
-            f"~{x:.5f} ~{y:.5f} ~{z:.5f} {deltax} {deltay} {deltaz} {speed} {count} {modifiers.viewmode}"
-        )
+        if particle_type == "dust":
+            commands.append(
+                f"particle dust{{color:[{r/255},{g/255},{b/255}],scale:{modifiers.particle_size}}} "
+                f"~{x:.5f} ~{y:.5f} ~{z:.5f} {deltax} {deltay} {deltaz} {speed} {count} {modifiers.viewmode} {modifiers.viewers}"
+            )
+        elif particle_type == "effect":
+            commands.append(
+                f"particle entity_effect{{color:[{r/255},{g/255},{b/255},{a/255}],scale:{modifiers.particle_size}}} "
+                f"~{x:.5f} ~{y:.5f} ~{z:.5f} {deltax} {deltay} {deltaz} {speed} {count} {modifiers.viewmode} {modifiers.viewers}"
+            )
 
 
     with open(mcfunction_file_path, 'w') as mcfunction_file:
@@ -304,7 +311,7 @@ def write_mcfunction_file(input, output_path, output_name,modifiers):
 
 
 
-def create_DataParticlesCloud_from_image(image_path, threshold=240):
+def create_DataParticlesCloud_from_image(image_path, threshold=240, reset_image_data=False,modifiers=None):
     """
     Creates a DataParticlesCloud object from an image file.
 
@@ -319,16 +326,25 @@ def create_DataParticlesCloud_from_image(image_path, threshold=240):
         print("Creating DataParticlesCloud from image...")
     # Open the image and convert it to RGBA
     img = Image.open(image_path).convert('RGBA')
-    InputData.image_resolution_width, InputData.image_resolution_height = img.width, img.height #Store original resolution
 
-    # Store input image resolution
+    
+    # When the program launches or the a new image is loaded the resolution is set to 0,0, so it needs to be updated.
+    if reset_image_data:
+        print("Initializing resolution...")
+        InputData.image_resolution_width, InputData.image_resolution_height = img.width, img.height #Store original resolution
+        # ImageData.width.set(img.width/float(ImageData.width_density.get()))
+        # ImageData.height.set(img.width/float(ImageData.height_density.get()))
+        ImageData.width_resolution.set(img.width)
+        ImageData.height_resolution.set(img.height)
+
+
+
+    
+
+
+    # Use the resolution settings
     width = int(ImageData.width_resolution.get())
     height = int(ImageData.height_resolution.get())
-
-    # When the program launches, the resolution is set to 0,0, so it needs to be updated.
-    if (width, height) == (0,0):
-        width = img.width
-        height = img.height
 
     # Resize the image to the desired resolution
     img = img.resize((width, height), Image.Resampling.BICUBIC)  
@@ -355,7 +371,10 @@ def create_DataParticlesCloud_from_image(image_path, threshold=240):
             
             position = normalized_x, normalized_y, 0 , 1
             # Add the position and color to the grid points
-            dataParticlesList.append(DataParticle(position, color))
+            if not modifiers.force_color_toggle:
+                dataParticlesList.append(DataParticle(position, color))
+            else:
+                dataParticlesList.append(DataParticle(position, modifiers.force_color))
 
     return DataParticlesCloud(dataParticlesList, (min_x, min_y, min_z), (max_x, max_y, max_z))
 

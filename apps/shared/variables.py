@@ -138,6 +138,7 @@ class ImageData():
 
 class ParticleData():
     size = 1.0
+    particle_type = "dust"
     viewmode = "Force"
     viewer="@a"
     force_color = "#fcfcfc"
@@ -154,13 +155,18 @@ class ParticlesCache():
 class Modifiers():
     def __init__(self):
         self.mode = InputData.mode
-        self.center = ParticlesCache.DataParticlesCloud.center
-        self.size = [*ParticlesCache.DataParticlesCloud.size,1]
+        if ParticlesCache.DataParticlesCloud:
+            self.center = ParticlesCache.DataParticlesCloud.center
+            self.size = [*ParticlesCache.DataParticlesCloud.size,1]
         
         self.particle_size = ParticleData.size
         self.viewmode = ParticleData.viewmode.get()
+        self.viewers = ParticleData.viewer.get()
         # self.particle_size = float(particle_size)
         # self.viewmode = viewmode
+        self.force_color = ParticleData.force_color.get()
+        self.force_color_toggle = ParticleData.force_color_toggle
+
 
         self.coordinate_axis_y = AlignmentData.coordinate_axis_y[AlignmentData.coordinate_axis.get()]
         self.coordinate_axis_x = AlignmentData.coordinate_axis_x[AlignmentData.coordinate_axis.get()]

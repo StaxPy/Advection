@@ -8,7 +8,7 @@ import backend.file_processor as fp
 
 
 
-class MultiProcessor_Progress(ctk.CTkToplevel):
+class Exporter_Progress(ctk.CTkToplevel):
     def __init__(self, TkApp, export_button, modifiers):
         super().__init__(TkApp)
         self.TkApp = TkApp
@@ -28,17 +28,60 @@ class MultiProcessor_Progress(ctk.CTkToplevel):
         self.frame = ctk.CTkFrame(self,fg_color=Styles.almost_black)
         self.frame.pack(fill="both", expand=True,padx=30,pady=30)
         
-        self.progress_bar = ctk.CTkProgressBar(self.frame,
-            orientation="horizontal",
-            width=200,
-            height=50,
-            corner_radius=0,
-            mode="determinate",
-            fg_color=Styles.almost_black,
-            border_color=Styles.white,
-            border_width=0,
-            progress_color=Styles.special_color)
+        self.create_UI()
+
+        self.launch(modifiers)
         
+
+    def create_UI(self):
+        # To implement in subclasses
+        pass
+
+    def launch(self,modifiers):
+        # To implement in subclasses
+        pass
+    
+    def stop(self):
+        # self.TkApp.attributes("-alpha", 1)
+        self.export_button.configure(state="normal")
+        self.pool.terminate()
+        # self.pool.join()
+        super().destroy()
+        # self.destroy()
+
+    def click_close(self):
+        if self.allow_closing:
+            self.stop()
+
+    def finished_UI(self):
+        # To implement in subclasses
+        pass
+
+    def open_output_folder(self):
+        import os
+        if os.name == 'nt':  # Windows
+            os.startfile(self.output_path)
+        elif os.name == 'posix':  # macOS or Linux
+            import subprocess
+            subprocess.run(['open', '-R', self.output_path])
+        # super.destroy()
+        self.destroy()
+            
+
+class Sequence_Exporter_Progress(Exporter_Progress):
+
+    def create_UI(self):
+        self.progress_bar = ctk.CTkProgressBar(self.frame,
+        orientation="horizontal",
+        width=200,
+        height=50,
+        corner_radius=0,
+        mode="determinate",
+        fg_color=Styles.almost_black,
+        border_color=Styles.white,
+        border_width=0,
+        progress_color=Styles.special_color)
+                
         self.progress_bar.set(0.01)
         self.label = ctk.CTkLabel(self.frame, text="Progress: 1%",text_color=Styles.white)
         self.cancel_button = ctk.CTkButton(self.frame, text="Cancel", command=self.stop,**Styles.normal_button_style)
@@ -51,14 +94,12 @@ class MultiProcessor_Progress(ctk.CTkToplevel):
         self.progress = 0
         self.progress_count = 0
 
+    def launch(self,modifiers):
         sequence_files = InputData.sequence_files
         self.output_path = OutputData.path
         start = int(SequenceData.start.get())
         end = int(SequenceData.end.get())
         args_list = []
-
-
-        
 
         for i in range(start, end+1):
             input_file_path = sequence_files[i]['path']
@@ -78,24 +119,6 @@ class MultiProcessor_Progress(ctk.CTkToplevel):
         self.results = [self.pool.apply_async(fp.write_mcfunction_file, args) for args in args_list]
 
         self.check_results()
-        
-        # self.update_progress()
-
-
-    def stop(self):
-        # self.TkApp.attributes("-alpha", 1)
-        self.export_button.configure(state="normal")
-        self.pool.terminate()
-        # self.pool.join()
-        super().destroy()
-        # self.destroy()
-
-
-    def click_close(self):
-        if self.allow_closing:
-            self.stop()
-
-
 
     def update_progress(self,result):
         if sv.DEBUG == True:
@@ -105,8 +128,6 @@ class MultiProcessor_Progress(ctk.CTkToplevel):
         self.progress_bar.set(self.progress)
         self.label.configure(text=f"Progress: {round(self.progress*100)}% ({self.progress_count}/{self.progress_maximum})")
 
-
-
     def check_results(self):
         for result in self.results:
             if result.ready():
@@ -115,22 +136,11 @@ class MultiProcessor_Progress(ctk.CTkToplevel):
         if self.results:
             self.after(100, self.check_results)
         else:
-            self.interface_finished()
+            self.finished_UI()
 
-    def interface_finished(self):
+    def finished_UI(self):
         self.allow_closing = True
         self.progress_bar.forget()
         self.cancel_button.forget()
         self.label.configure(text=f"Sucessfully exported {self.progress_count} files!")
         self.open_output_button.pack(pady=10)
-
-    def open_output_folder(self):
-        import os
-        if os.name == 'nt':  # Windows
-            os.startfile(self.output_path)
-        elif os.name == 'posix':  # macOS or Linux
-            import subprocess
-            subprocess.run(['open', '-R', self.output_path])
-        # super.destroy()
-        self.destroy()
-            

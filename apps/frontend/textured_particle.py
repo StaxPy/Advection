@@ -16,6 +16,7 @@ def inside_screen(vertex):
 class TexturedParticle():
     def __init__(self, texture, position=(0,0,0), color=None, size = None):
         self.position = position
+        self.color = color
         if size is None:
             self.size = texture.get_size()
         else :
@@ -74,16 +75,24 @@ class TexturedParticlesCloud:
         sorted_depths = depths[sorted_indices]
 
         blits_sequence = []
-        for index, particle in enumerate(sorted_particles):
-            if sorted_visibility[index]:
-                scale = float(ParticleData.size) * 30 / sorted_depths[index] #TODO: find correct scaling value
-                if scale <= 0.1 :
-                    scale = 0.1
-                scaled_particle = pg.transform.scale_by(particle.surface, scale)
-                position = np.add(sorted_positions[index], np.divide(scaled_particle.get_size(),-2))
-                # position = np.add(sorted_positions[index], -scale / 2)
-                # render.screen.blit(scaled_particle, position)
-                blits_sequence.append((scaled_particle, position))
+        if ParticlesCache.TexturedParticlesCloud.count < 10000:
+            for index, particle in enumerate(sorted_particles):
+                if sorted_visibility[index]:
+                    scale = float(ParticleData.size) * 10 / sorted_depths[index] #TODO: find correct scaling value
+                    if scale <= 0.1 :
+                        scale = 0.1
+                    scaled_particle = pg.transform.scale_by(particle.surface, scale)
+                    position = np.add(sorted_positions[index], np.divide(scaled_particle.get_size(),-2))
+                    # position = np.add(sorted_positions[index], -scale / 2)
+                    # render.screen.blit(scaled_particle, position)
+                    blits_sequence.append((scaled_particle, position))
 
-        render.screen.blits(blits_sequence)
+            render.screen.blits(blits_sequence)
+        else:
+            for index, particle in enumerate(sorted_particles):
+                if sorted_visibility[index]:
+                    scale = float(ParticleData.size) * 10 / sorted_depths[index] #TODO: find correct scaling value
+                    if scale <= 1 :
+                        scale = 1
+                    pg.draw.circle(render.screen, particle.color, (sorted_positions[index][0],sorted_positions[index][1]),radius=scale)
                 

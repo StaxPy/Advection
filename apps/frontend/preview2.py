@@ -10,9 +10,10 @@ import os
 
 class PygameRender:
     def __init__(self,WIDTH, HEIGHT, frame):
-        
+        self.frame = frame
         self.RES = self.WIDTH, self.HEIGHT = WIDTH, HEIGHT
         self.H_WIDTH, self.H_HEIGHT = self.WIDTH // 2, self.HEIGHT // 2
+        self.aspect_ratio = self.WIDTH / self.HEIGHT
         self.FPS = 60
 
         os.environ['SDL_WINDOWID'] = str(frame.winfo_id())
@@ -22,12 +23,12 @@ class PygameRender:
         self.clock = pg.time.Clock()
         pg.font.init()
 
-        self.InterFont = pg.font.SysFont('Inter', 15)
+        self.InterFont = pg.font.SysFont('Inter', 13)
 
         td.load_textures()
         td.load_spritesheet_animations()
 
-        PygameData.texture = td.solo_textures['dust'] # Define the texture used of render (temporary, until a real setting is implemented)
+        self.set_particles_texture(ParticleData.particle_type.get()) # Define the texture used of render
         self.test_surface = td.spritesheet_textures['dust'] #test
         self.test_index = 0
 
@@ -57,23 +58,30 @@ class PygameRender:
         # self.surface.blit(self.image, (0, 0), special_flags=pg.BLEND_RGBA_MULT)
         ''''''
 
+    def set_particles_texture(self, texture_name):
+        if sv.DEBUG:
+            print(f"Setting particles texture to {texture_name}")
+        PygameData.texture = td.solo_textures[f"{texture_name}"]
+
 
     def create_object(self):
         self.camera = Camera(self, [0, 1, -5]) # Initialize the camera
-        self.projection = Projection(self) # Instanciate the projection
+        self.projection = Projection(self,self.aspect_ratio) # Instanciate the projection
 
         self.world_axes = Axes(self)
         self.world_axes.movement_flag = False
 
         # self.grid = Grid(self, 10, 1.0) #Unused
 
+    def reset_camera(self):
+        self.camera = Camera(self, [0, 1, -5])
+        PygameTempData.update_requested += 1
 
     def draw_frame(self):
         # self.model.example_rotation()
 
         # self.model.rotate_y(pg.time.get_ticks() % 0.05)
         # self.model.translate([0.002, 0.002, 0.002])
-
         # self.model.draw()
         self.world_axes.draw()
         # self.test_texturedcloud.draw()
@@ -97,11 +105,15 @@ class PygameRender:
     #         self.clock.tick(self.FPS)
 
     def refresh_cloud_stats(self):
-        self.cloud_size = tuple(float(x) for x in np.round(ParticlesCache.TexturedParticlesCloud.size, 2))
-        self.cloud_size_display = self.InterFont.render(f'Size: {self.cloud_size}', True, (255, 255, 255))
+        # self.cloud_size = tuple(float(x) for x in np.round(ParticlesCache.TexturedParticlesCloud.size, 2))
+        # self.cloud_size_display = self.InterFont.render(f'Size: {self.cloud_size}', True, (255, 255, 255))
         
         self.cloud_count = ParticlesCache.TexturedParticlesCloud.count
-        self.cloud_count_display = self.InterFont.render(f'Count: {self.cloud_count}', True, (255, 255, 255))
+        if self.cloud_count > 10000:
+            color = (255,0,0)
+        else:
+            color = (255,255,255)
+        self.cloud_count_display = self.InterFont.render(f'Count: {self.cloud_count}', True, color)
 
         
     def loop(self):
@@ -148,11 +160,10 @@ class PygameRender:
 
         if PygameData.toggle_render.get() == 1:
             self.draw_frame()
+            self.screen.blit(self.InterFont.render(f'FPS: {round(self.FPS)}', True, (255, 255, 255)), (10, 50))
 
-        self.screen.blit(self.cloud_size_display, (10, 30))
-        self.screen.blit(self.cloud_count_display, (10, 50))
-        fps_display = self.InterFont.render(f'FPS: {round(self.FPS)}', True, (255, 255, 255))
-        self.screen.blit(fps_display, (10, 70))
+        # self.screen.blit(self.cloud_size_display, (10, 30))
+        self.screen.blit(self.cloud_count_display, (10, 30))
 
         # self.test_index()
         #self.test_animation_2()
@@ -191,7 +202,10 @@ class PygameRender:
 
         for event in self.pg_events:
             if event.type == pg.VIDEORESIZE:
-                PygameTempData.update_requested += 2
+                print(self.frame.winfo_width(), self.frame.winfo_height())
+                self.H_WIDTH, self.H_HEIGHT = self.frame.winfo_width() // 2, self.frame.winfo_height() // 2
+                self.projection = Projection(self,self.aspect_ratio)
+                PygameTempData.update_requested += 5 # Several frames to be sure it updates
             if event.type == pg.MOUSEBUTTONDOWN:
                 # if self.starting:
                 #     self.starting = False
