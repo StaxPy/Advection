@@ -1,6 +1,7 @@
 import pygame as pg
 from backend.modifiers import *
 from shared.variables import *
+import frontend.color_operations as co
 from numba import njit
 
 
@@ -25,7 +26,11 @@ class TexturedParticle():
         self.rect = texture.get_rect()
         if color is not None:
             self.surface = pg.Surface(self.size).convert_alpha() # Create an empty RGBA image with the same size as the texture
+            if ParticleData.particle_type.get() == 'dust':
+                # change the color alpha to 255
+                color = (color[0], color[1], color[2], 255)
             self.surface.fill(color) # Fill it with the desired color
+
             self.surface.blit(texture, (0,0), special_flags=pg.BLEND_RGBA_MULT)
         else:
             self.surface = texture
@@ -34,7 +39,8 @@ class TexturedParticlesCloud:
     def __init__(self, DataParticlesCloud, texture):
         self.texture = texture
         if ParticleData.force_color_toggle:
-            self.TexturedParticlesList = [(TexturedParticle(self.texture, DataParticle.position, ParticleData.force_color.get())) for DataParticle in ParticlesCache.DataParticlesCloud.DataParticlesList]
+            force_color = co.hex_to_rgb(ParticleData.force_color.get())
+            self.TexturedParticlesList = [(TexturedParticle(self.texture, DataParticle.position, force_color)) for DataParticle in ParticlesCache.DataParticlesCloud.DataParticlesList]
         else:
             self.TexturedParticlesList = [(TexturedParticle(self.texture, DataParticle.position, DataParticle.color)) for DataParticle in ParticlesCache.DataParticlesCloud.DataParticlesList]        
         self.particle_positions = DataParticlesCloud.particle_positions
@@ -47,7 +53,8 @@ class TexturedParticlesCloud:
         
     def refresh_colors(self):
         if ParticleData.force_color_toggle:
-            self.TexturedParticlesList = [(TexturedParticle(self.texture, DataParticle.position, ParticleData.force_color.get())) for DataParticle in ParticlesCache.DataParticlesCloud.DataParticlesList]
+            force_color = co.hex_to_rgb(ParticleData.force_color.get())
+            self.TexturedParticlesList = [(TexturedParticle(self.texture, DataParticle.position, force_color)) for DataParticle in ParticlesCache.DataParticlesCloud.DataParticlesList]
         else:
             self.TexturedParticlesList = [(TexturedParticle(self.texture, DataParticle.position, DataParticle.color)) for DataParticle in ParticlesCache.DataParticlesCloud.DataParticlesList]
         PygameTempData.update_requested += 1

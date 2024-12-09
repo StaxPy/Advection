@@ -6,11 +6,17 @@ class Projection:
     def __init__(self, render, aspect_ratio):
         NEAR = render.camera.near_plane
         FAR = render.camera.far_plane
-        RIGHT = math.tan(render.camera.h_fov / 2*(render.H_WIDTH/render.H_HEIGHT)) 
-        print((render.H_WIDTH/render.H_HEIGHT))
-        LEFT = -RIGHT
-        TOP = math.tan(render.camera.v_fov / 2 )
-        BOTTOM = -TOP
+        # Adjust horizontal and vertical FOV based on aspect ratio
+        if aspect_ratio >= 1:  # Wider screens
+            RIGHT = math.tan(render.camera.h_fov / 2)
+            LEFT = -RIGHT
+            TOP = RIGHT / aspect_ratio
+            BOTTOM = -TOP
+        else:  # Taller screens
+            TOP = math.tan(render.camera.v_fov / 2)
+            BOTTOM = -TOP
+            RIGHT = TOP * aspect_ratio
+            LEFT = -RIGHT
 
         m00 = 2 / (RIGHT - LEFT)
         m11 = 2 / (TOP - BOTTOM)

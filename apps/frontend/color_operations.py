@@ -10,7 +10,6 @@ def rgb_to_hex(rgb):
 
 def interpolate_colors(hex_color1, hex_color2, ratio):
     ratio = np.clip(ratio, 0, 1)
-    print(ratio)
     rgb_color1 = hex_to_rgb(hex_color1)
     rgb_color2 = hex_to_rgb(hex_color2)
     interpolated = np.array(rgb_color1) + (np.array(rgb_color2) - np.array(rgb_color1)) * ratio

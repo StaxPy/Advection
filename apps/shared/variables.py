@@ -93,6 +93,7 @@ class InputData():
     seq_length = 0
     sequence_files = {}
     image_resolution_width, image_resolution_height = 0, 0
+    alpha_threshold = 127
 
 class SequenceData():
     toggle = 0
@@ -135,6 +136,7 @@ class ImageData():
     old_width_resolution, old_height_resolution = 0, 0
     resolution_ratio = 0
     lock_resolution_ratio = True
+    resampling = "Nearest"
 
 class ParticleData():
     size = 1.0
@@ -155,11 +157,11 @@ class ParticlesCache():
 class Modifiers():
     def __init__(self):
         self.mode = InputData.mode
-        if ParticlesCache.DataParticlesCloud:
-            self.center = ParticlesCache.DataParticlesCloud.center
-            self.size = [*ParticlesCache.DataParticlesCloud.size,1]
+        self.center = ParticlesCache.DataParticlesCloud.center
+        self.size = [*ParticlesCache.DataParticlesCloud.size,1]
         
         self.particle_size = ParticleData.size
+        self.particle_type = ParticleData.particle_type.get()
         self.viewmode = ParticleData.viewmode.get()
         self.viewers = ParticleData.viewer.get()
         # self.particle_size = float(particle_size)
@@ -182,3 +184,5 @@ class Modifiers():
         
         self.image_size_width, self.image_size_height = float(ImageData.width.get()), float(ImageData.height.get())
         self.image_size = [self.image_size_width, self.image_size_height,1,1]
+        self.image_resolution = [int(ImageData.width_resolution.get()), int(ImageData.height_resolution.get())]
+        self.resampling = ImageData.resampling
