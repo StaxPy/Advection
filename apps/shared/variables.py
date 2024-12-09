@@ -74,6 +74,7 @@ class PygameData():
     PygameRenderer = None
     frame = 0
     texture = None
+    textures = []
     toggle_render = 1
 
 class PygameTempData():
@@ -141,7 +142,9 @@ class ImageData():
 class ParticleData():
     size = 1.0
     particle_type = "dust"
-    viewmode = "Force"
+    type_scaling = {"dust": 20, "effect": 15}
+    type_pos_variation = {"dust": 0.01, "effect": 0.02}
+    viewmode = "force"
     viewer="@a"
     force_color = "#fcfcfc"
     force_color_toggle = False
@@ -166,7 +169,7 @@ class Modifiers():
         self.viewers = ParticleData.viewer.get()
         # self.particle_size = float(particle_size)
         # self.viewmode = viewmode
-        self.force_color = ParticleData.force_color.get()
+        self.force_color = ParticleData.force_color
         self.force_color_toggle = ParticleData.force_color_toggle
 
 

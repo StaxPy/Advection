@@ -110,12 +110,12 @@ class UI():
                 return
             fd.update_json_memory("input_path",os.path.dirname(dialog_result)) # Update the JSON file
             if os.path.splitext(os.path.basename(dialog_result))[1] != "": # Check if the file has a name and extension
-                UI.try_update_input(dialog_result, reset_image_size=True)
+                UI.try_update_input(dialog_result, reset_image_size=True, use_sequence=False)
             else :
                 tk.messagebox.showerror("File name or extension is empty", "Please select another file.",icon="info")
 
 
-        def try_update_input(input_path, reset_image_size=False):
+        def try_update_input(input_path, reset_image_size=False,use_sequence=True):
             """
             Tries to update the particles cloud with the given input path.
 
@@ -125,7 +125,7 @@ class UI():
                 print("try_update_input")
 
             try:
-                UI.update_particles_cloud(input_path, reset_image_size) # Try to generate a new cloud
+                UI.update_particles_cloud(input_path, reset_image_size,use_sequence) # Try to generate a new cloud
             except Exception as e:
                 print(f"{e}, Updating canceled")
             else :
@@ -167,7 +167,7 @@ class UI():
             
 
 
-        def update_particles_cloud(input_path=None, reset_image_data=False):
+        def update_particles_cloud(input_path=None, reset_image_data=False,use_sequence=True):
             """
             Attemps to create a new DataParticlesCloud and TexturedParticlesCloud.
 
@@ -184,8 +184,12 @@ class UI():
             if input_path == None: # If no path is given
                 input_path = InputData.path # Use the stored input path
 
-            if SequenceData.toggle.get() == 1: # If the sequence toggle is on
+            if use_sequence and SequenceData.toggle.get() == 1: # If the sequence toggle is on
                 input_path = InputData.sequence_files[int(PygameData.frame.get())]["path"] # Change the path to the selected frame
+
+            if input_path == None: # If no input path is found
+                UI.random_cloud()
+                return
 
             try:
                 # modifiers = Modifiers()
@@ -196,12 +200,27 @@ class UI():
                 raise Exception("Error while creating DataParticlesCloud from file",e)
 
             else: 
-                print("DataParticlesCloud created")
+                print("DataParticlesCloud created", "Particle center: ",newDataParticlesCloud.center, "Particles count: ",newDataParticlesCloud.count)
                 ParticlesCache.DataParticlesCloud = newDataParticlesCloud
                 ParticlesCache.TexturedParticlesCloud = PygameData.PygameRenderer.DataParticlesCloud_to_TexturedParticlesCloud(ParticlesCache.DataParticlesCloud) # Create the TexturedParticlesCloud
                 PygameData.PygameRenderer.refresh_cloud_stats()
                 PygameTempData.update_requested += 2
             
+        def random_cloud():
+            print("random_cloud")
+            InputData.mode = "model"
+            # UI.image_frame.grid_forget()
+            UI.model_frame.grid(row = 3, column = 0,sticky="nsew",pady=5,padx=10)
+            
+            AlignmentData.horizontal_align.set('None')
+            AlignmentData.vertical_align.set('None')
+            ParticlesCache.DataParticlesCloud = fp.create_random_cube_DataParticlesCloud(100,(2,2,2))
+            ParticlesCache.TexturedParticlesCloud = PygameData.PygameRenderer.DataParticlesCloud_to_TexturedParticlesCloud(ParticlesCache.DataParticlesCloud) # Create the TexturedParticlesCloud
+            UI.reset_model_resize() # Update the model resize
+            PygameData.PygameRenderer.refresh_cloud_stats()
+            PygameTempData.update_requested += 2
+
+            print(ParticlesCache.DataParticlesCloud.min_pos,ParticlesCache.DataParticlesCloud.max_pos)
 
 
         def reset_model_resize():
@@ -338,13 +357,12 @@ class UI():
 
 
         def ask_color():
-            current_color = ParticleData.force_color.get()
-            pick_color = CTkColorPicker.AskColor(initial_color=current_color,bg_color=Styles.dark_gray,fg_color=Styles.dark_gray,button_color=Styles.medium_gray,button_hover_color=Styles.hover_color,corner_radius=10) # open the color picker
+            pick_color = CTkColorPicker.AskColor(initial_color=ParticleData.force_color,bg_color=Styles.dark_gray,fg_color=Styles.dark_gray,button_color=Styles.medium_gray,button_hover_color=Styles.hover_color,corner_radius=10) # open the color picker
             color = pick_color.get() # get the color string
             if color != None:
                 UI.particle_color_button.configure(fg_color=color)
                 # UI.particle_hexcode_entry.cget("textvariable").set(color)
-                ParticleData.force_color.set(color)
+                ParticleData.force_color = color
                 ParticlesCache.TexturedParticlesCloud.refresh_colors()
 
         def slider_update_preview_frame(frame):
@@ -646,6 +664,8 @@ class UI():
             
             try: # Try to convert the entry to a number
                 new_value = UI.round_float_to_int(float(numexpr.evaluate(tested_var.get())))
+                if new_value == 0: # If the ratio is locked and the value is 0, raise an exception
+                    raise ValueError("Trying to set a value to 0")
                 if type == "resolution": # Resolution is necessarily a integer
                     new_value = round(new_value)
             except: # If the entry is invalid, reset to default
@@ -761,33 +781,37 @@ class UI():
             
             try: # Try to convert the entry to a number
                 new_value = round_float_to_int(float(numexpr.evaluate(tested_var.get())))
+                if new_value == 0:
+                    raise ValueError("Trying to set a value to 0")
             except: # If the entry is invalid, reset to default
                 if sv.DEBUG: print("Invalid entry")
-                new_value = round_float_to_int(default)
+                new_value = round_float_to_int(round(default,4))
 
             finally: # Finally, update the variable to the result (rounded and eventually result of the operation)
-                tested_var.set(new_value) # Update the tested entry to the formatted value
-
-                if lock_ratio == True: # If the ratio is locked
-                    multiplier = new_value / old_value # Calculate the multiplier
-                    width = float(ModelData.width.get())
-                    height = float(ModelData.height.get())
-                    depth = float(ModelData.depth.get())
-                    # Update the linked entries accordingly
-                    if dim == "width":
-                        ModelData.height.set(height * multiplier)
-                        ModelData.depth.set(depth * multiplier)
-                    elif dim == "height":
-                        ModelData.width.set(width * multiplier)
-                        ModelData.depth.set(depth * multiplier)
-                    elif dim == "depth":
-                        ModelData.width.set(width * multiplier)
-                        ModelData.height.set(height * multiplier)
+                tested_var.set(new_value)
+                # Update the tested entry to the formatted value
+                width = float(ModelData.width.get())
+                height = float(ModelData.height.get())
+                depth = float(ModelData.depth.get())
 
                 # Update the old values
                 ModelData.old_width = width
                 ModelData.old_height = height
                 ModelData.old_depth = depth
+
+                if lock_ratio == True: # If the ratio is locked
+                    multiplier = new_value / old_value # Calculate the multiplier
+
+                    # Update the linked entries accordingly
+                    if dim == "width":
+                        ModelData.height.set(round(height * multiplier,4))
+                        ModelData.depth.set(round(depth * multiplier,4))
+                    elif dim == "height":
+                        ModelData.width.set(round(width * multiplier,4))
+                        ModelData.depth.set(round(depth * multiplier,4))
+                    elif dim == "depth":
+                        ModelData.width.set(round(width * multiplier,4))
+                        ModelData.height.set(round(height * multiplier,4))
 
                 PygameTempData.update_requested += 1
         
@@ -890,6 +914,7 @@ class UI():
             ImageData.resampling = value
             UI.update_particles_cloud(InputData.path)
 
+        image_resampling_label = customtkinter.CTkLabel(image_frame, text="Resampling",text_color=Styles.light_gray,font=Styles.InterFont)
         image_resampling_menu = customtkinter.CTkOptionMenu(image_frame, values=["Nearest","Bilinear","Bicubic"], height=25, command=update_image_resampling,**Styles.normal_menu_style)
 
         def lock_image_resolution_ratio():
@@ -920,7 +945,7 @@ class UI():
 
         # GRID PARAMETERS
         image_frame.grid_columnconfigure([0,1,3,4], weight=1,uniform="a")
-        image_frame.grid_rowconfigure([0,1,2,3,4], weight=1,uniform="a")
+        image_frame.grid_rowconfigure([0,1,2,3,4,5], weight=1,uniform="a")
 
         # PLACEMENT PARAMETERS
         image_size_label.grid(column=0, row=1, padx=15, pady=0,sticky="e")
@@ -953,7 +978,8 @@ class UI():
         image_resolution_height_entry.grid(column=3, row=4, padx=0, pady=0,sticky="")
         lock_resolution_ratio_toggle_button.grid(column=2, row=4, padx=15, pady=10,sticky="ns")
 
-        image_resampling_menu.grid(column=4, row=4, padx=5, pady=0,sticky="w")
+        image_resampling_label.grid(column=0, row=5, padx=15, pady=0,sticky="en")
+        image_resampling_menu.grid(column=1, columnspan=3, row=5, padx=0, pady=0,sticky="wen")
         # update_image_resolution_button.grid(column=4, row=4, padx=0, pady=0,sticky="nw")
         # image_resize_checkbox.grid(column=4, row=4, padx=0, pady=0,sticky="nw")
 
@@ -981,7 +1007,7 @@ class UI():
         particle_type_label = customtkinter.CTkLabel(particle_frame, text="Particle Type",text_color=Styles.light_gray,font=Styles.InterFont)
 
         ParticleData.viewmode = tk.StringVar(value=ParticleData.viewmode)
-        particle_mode_menu = customtkinter.CTkOptionMenu(particle_frame, **Styles.normal_menu_style,variable=ParticleData.viewmode, values=["Force", "Normal"],font=Styles.InterFont)
+        particle_mode_menu = customtkinter.CTkOptionMenu(particle_frame, **Styles.normal_menu_style,variable=ParticleData.viewmode, values=["force", "normal"],font=Styles.InterFont)
         particle_mode_label = customtkinter.CTkLabel(particle_frame, text="View mode",text_color=Styles.light_gray,font=Styles.InterFont)
 
         ParticleData.viewer = tk.StringVar(value=ParticleData.viewer)
@@ -994,7 +1020,6 @@ class UI():
 
         particle_color_checkbox = customtkinter.CTkCheckBox(particle_frame,variable=tk.IntVar(value=False),command=toggle_force_color, text="ReColor", onvalue=True, offvalue=False,**Styles.checkbox_style)
         particle_hexcode_label = customtkinter.CTkLabel(particle_frame, text="Hexcode",text_color=Styles.light_gray,font=Styles.InterFont)
-        ParticleData.force_color = tk.StringVar(value=ParticleData.force_color)
         
 
         def slider_update_alpha_threshold(value):

@@ -78,15 +78,14 @@ def create_DataParticlesCloud_from_obj_file(obj_file_path, modifiers):
             lines = obj_file.readlines()
         return lines
         
-    def parse_vertex(line):
+    def parse_vertex_data(line):
         parts = line.strip().split()
         if len(parts) == 7:
-            position = map(float, parts[1:4])
-            color = map(float, parts[4:])
-            return tuple(position), tuple(color)
+            vertex_data = map(float, parts[1:])
+            return tuple(vertex_data), True
         else:
-            position = map(float, parts[1:4])
-            return tuple(position), None
+            vertex_data = map(float, parts[1:4])
+            return tuple(vertex_data), False
         
     def parse_texture_coordinate(line):
         # Returns a tuple (u, v)
@@ -128,108 +127,137 @@ def create_DataParticlesCloud_from_obj_file(obj_file_path, modifiers):
         z = sum(vertices[vi][2] for vi, _ in face) / len(face)
         return tuple(round(coord, 5) for coord in (x, y, z))+ (1,)
     
-    def pick_particle_color(face, face_material):
+    def get_particle_color_from_material(face, face_material):
+        """
+        Returns the color of a particle based on the material associated with the face it belongs to.
+        If the material does not exist, returns the default color.
 
-        # TODO
-        # for id in face:
-        #     print(id)
-        # if any(vertex_color[id] is not None for id in face):
-        #     # get the average color of each vertex in the face
-        #     r = sum(vertex_color[id][0] for id in face) / len(face)
-        #     g = sum(vertex_color[id][1] for id in face) / len(face)
-        #     b = sum(vertex_color[id][2] for id in face) / len(face)
-        #     a = sum(vertex_color[id][3] for id in face) / len(face)
-        #     return r*255, g*255, b*255, a*255
+        Parameters
+        ----------
+        face : list of tuples
+            List of (vertex index, texture coordinate index) pairs defining the face.
+        face_material : str
+            Name of the material associated with the face.
+
+        Returns
+        -------
+        tuple of 4 int
+            RGBA color of the particle, or None if the material does not exist or the alpha value is less than 50%.
+        """
+
         # If the material the face is using exists
         if face_material in materials:
-            if materials[face_material]['texture'] is not None:
+            if materials[face_material]['texture'] is not None: # Try using the texture
                 img = Image.open(materials[face_material]['texture'])  # Open the texture image
 
                 # Calculate the average texture coordinates for the face
                 texcoord_center = calculate_face_texture_center(texture_coordinates, face)
 
+
                 # Sample the color from the texture at the center of the face
                 color = sample_color_from_texture(texcoord_center, img)
                 return color[:4]  # Get RGBA values
-            else: # Use the defined color from the material if no texture is available
+            elif materials[face_material]['color'] is not None: # If no texture, try using material color
                 r, g, b = materials[face_material]['color'] # Default to white
                 a = materials[face_material]['transparency'] if materials[face_material]['transparency'] is not None else 255  # Default to opaque
                 return r*255, g*255, b*255, a*255
         else: # Use the default color if the material does not exist
             return default_color
-            
-        # Check the alpha value (skip if less than 50%)
-        if a < 128:  # 50% of 255 is 127.5, so we round up to 128
-            return None
+        
 
 
     filename = os.path.basename(obj_file_path)
     lines = extract_obj_lines(obj_file_path)
-    vertex_positions = [] # List to store vertex positions
-    vertex_colors = [] # List to store vertex colors (Nones if absent)
+    vertices = [] # List to store vertex data
+    colored_vertices = [] # List to store vertex colors (rgb) paired with vertex id 
+    vertex_color_found = False # Flag to check if vertex color is found
     texture_coordinates = [] # List to store texture coordinates
     faces = [] # List to store faces (each face is a list of vertex indices)
-    faces_materials = [] # List to store materials
-    current_material = None
+    faces_materials = [] # List to store materials associated with each face (None is not found)
+    current_material_name = None
     mtl_file_path = None
     materials = {}
-    default_color = hex_to_rgb(modifiers.force_color)+(255,) if modifiers else (255, 255, 255, 255)
+    default_color = hex_to_rgb(modifiers.force_color)+(255,) if modifiers else hex_to_rgb(ParticleData.force_color)+(255,)
 
 
-
+    # Parse the OBJ file
     for line in lines:
         # process line to extract vertex positions, texture coordinates, faces, and materials
         if line.startswith('v '): # Vertex
-            vertex_position, vertex_color = parse_vertex(line)
-            vertex_positions.append(vertex_position)
-            vertex_colors.append(vertex_color)
+            vertex_id = len(vertices)
+            vertex_data, has_color = parse_vertex_data(line)
+            vertex_color_found = has_color
+            vertices.append(vertex_data[0:3])
+            if has_color: 
+                # Store the vertex color as a value paired with the vertex id
+                colored_vertices.append({vertex_id: vertex_data[3:7]})
+
         elif line.startswith('vt '): # Texture coordinates
             texture_coordinates.append(parse_texture_coordinate(line))
         elif line.startswith('f '): # Face
-            faces.append(parse_face(line, current_material))
+            faces.append(parse_face(line, current_material_name))
         elif line.startswith('mtllib '): # MTL file reference
             mtl_file_path = parse_mtl_reference(line)
-        elif line.startswith('usemtl '): # Material
-            current_material = parse_material(line)
+        elif line.startswith('usemtl '): # Material name
+            current_material_name = parse_material(line)
     
-
+    # Load materials (textures, colors and transparencies)
     if mtl_file_path and os.path.exists(mtl_file_path):
-        materials = read_mtl_file(mtl_file_path)  # Load materials (textures, colors and transparencies)
+        materials = read_mtl_file(mtl_file_path)
         if materials:
             print(f"Using materials from MTL file '{mtl_file_path}'.") if sv.DEBUG else None
         else:
             print(f"No material found in MTL file '{mtl_file_path}'. Using default color.") if sv.DEBUG else None
     else:
-        print(f"No MTL file found or referenced in the OBJ file '{filename}'.")
+        print(f"No MTL file found or referenced in the OBJ file '{filename}'.") if sv.DEBUG else None
         
-    if not vertex_positions:
+    if not vertices:
         print(f"No vertices found in the OBJ file '{filename}'.")
         raise ValueError(f"No vertices found in the OBJ file '{filename}'.")
 
-    min_x, max_x, min_y, max_y, min_z, max_z = find_min_max(vertex_positions)
+    min_x, max_x, min_y, max_y, min_z, max_z = find_min_max(vertices)
 
     # Creating the particle cloud
     dataParticlesList = []
-    for face, face_material in zip(faces, faces_materials):
 
-        # Find the geometric center of the face, using fixed decimal formatting (5 decimal places)
-        face_center = get_face_center(vertex_positions, face)
 
-        # Find the color of the particle
-        r, g, b, a = pick_particle_color(face,face_material)
+    if materials:
+        # For every face, if its material exists, create a particle at its center
+        for face, face_material in zip(faces, faces_materials):
 
-        # Skip the particle if the alpha value is less than 50%
-        if (a < int(InputData.alpha_threshold) ):
-            continue
 
-        # Append the particle to the list
-        dataParticlesList.append(DataParticle(face_center, (r, g, b, a)))
+            # Find the geometric center of the face, using fixed decimal formatting (5 decimal places)
+            face_center = get_face_center(vertices, face)
 
-    if len(dataParticlesList) == 0:
-        raise ValueError(f'All particles are transparent.')
+            # Find the color of the particle
+            r, g, b, a = get_particle_color_from_material(face,face_material)
+            # Skip the particle if the alpha value is less than 50%
+            if (a < int(InputData.alpha_threshold) ):
+                continue
 
+            # Append the particle to the list
+            dataParticlesList.append(DataParticle(face_center, (r, g, b, a)))
+
+    # If vertex color data if present in the file, create a particle for every vertex
+    if vertex_color_found:
+        for colored_vertex in colored_vertices:
+            for vertex_id, vertex_color in colored_vertex.items():
+                position = vertices[vertex_id]+(1,) # Add 1 component for homogenous coordinates
+                r, g, b = vertex_color
+                # dataParticlesList[vertex_id].color = vertex_color
+                # Append the particle to the list
+                dataParticlesList.append(DataParticle(position, (r*255, g*255, b*255, 255)))
+
+    # If neither materials nor vertex color is found, create a default color particle for every vertex 
+    if not materials and not vertex_color_found:
+        dataParticlesList.extend([DataParticle(position+(1,), default_color) for position in vertices])
+
+    # Cancel if no valid particle could be created
+    if not dataParticlesList:
+        print(f"No valid particle could be created from '{filename}'.")
+        raise ValueError(f"No valid particle could be created from '{filename}'.")
+    
     return DataParticlesCloud(dataParticlesList, (min_x, min_y, min_z), (max_x, max_y, max_z))
-
 
 def create_DataParticlesCloud_from_image(image_path, reset_image_data=False,modifiers=None):
     """
@@ -305,7 +333,30 @@ def create_DataParticlesCloud_from_image(image_path, reset_image_data=False,modi
 
             dataParticlesList.append(DataParticle(position, color))
 
+    # Cancel if no valid particle could be created
+    if not dataParticlesList:
+        print(f"No valid particle could be created from '{image_path}'.")
+        raise ValueError(f"No valid particle could be created using current settings. Try changing alpha threshold.")
+    
     return DataParticlesCloud(dataParticlesList, (min_x, min_y, min_z), (max_x, max_y, max_z))
+
+def create_random_cube_DataParticlesCloud(count: int, size: tuple):
+    min_x, min_y, min_z = 0, 0, 0
+    max_x, max_y, max_z = size
+    DataParticlesList = []
+
+    for _ in range(count):
+        x = random.uniform(min_x, max_x)
+        y = random.uniform(min_y, max_y)
+        z = random.uniform(min_z, max_z)+size[2]/2
+        r = random.randint(0, 255)
+        g = random.randint(0, 255)
+        b = random.randint(0, 255)
+
+        DataParticlesList.append(DataParticle(position=(x, y, z, 1), color=(r, g, b, 255)))
+
+    return DataParticlesCloud(DataParticlesList, (min_x, min_y, min_z), (max_x, max_y, max_z))
+
 
 def read_mtl_file(mtl_file_path):
     
@@ -320,6 +371,8 @@ def read_mtl_file(mtl_file_path):
         containing 'texture' (str or None), 'color' (tuple of floats or None),
         and 'transparency' (float or None) for each material.
     """
+    print("read MTL") if sv.DEBUG else None
+
     materials = {}
     current_material = None
     
@@ -361,7 +414,7 @@ def calculate_face_texture_center(texture_coords, face):
     v = sum(texture_coords[ti][1] for _, ti in face) / len(face)
     return (u, v)
 
-def sample_color_from_texture(texcoord, img):
+def sample_color_from_texture(texcoord, img: Image.Image):
     """Samples the color from the texture image based on the texture coordinates, including alpha."""
     u, v = texcoord
     width, height = img.size

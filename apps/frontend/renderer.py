@@ -26,11 +26,11 @@ class PygameRender:
         self.InterFont = pg.font.SysFont('Inter', 13)
 
         td.load_textures()
-        td.load_spritesheet_animations()
+        td.load_atlas_animations()
 
         self.set_particles_texture(ParticleData.particle_type.get()) # Define the texture used of render
-        self.test_surface = td.spritesheet_textures['dust'] #test
-        self.test_index = 0
+        # self.test_surface = td.spritesheet_textures['dust'] #test
+        # self.test_index = 0
 
         self.create_object()
 
@@ -59,6 +59,7 @@ class PygameRender:
 
     def set_particles_texture(self, texture_name):
         PygameData.texture = td.solo_textures[f"{texture_name}"]
+        PygameData.textures = td.atlas_frames[f"{texture_name}"]
 
 
     def create_object(self):
@@ -238,4 +239,4 @@ class PygameRender:
 
     def DataParticlesCloud_to_TexturedParticlesCloud(self, dataParticlesCloud):
         """Converts a DataParticlesCloud instance to a TexturedParticlesCloud instance."""
-        return TexturedParticlesCloud( dataParticlesCloud, PygameData.texture)
+        return TexturedParticlesCloud( dataParticlesCloud, PygameData.textures)
