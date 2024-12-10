@@ -359,6 +359,14 @@ class UI():
 
         def ask_color():
             pick_color = CTkColorPicker.AskColor(initial_color=ParticleData.force_color,bg_color=Styles.dark_gray,fg_color=Styles.dark_gray,button_color=Styles.medium_gray,button_hover_color=Styles.hover_color,corner_radius=10) # open the color picker
+                    # get the position of the main window
+            x = UI.TkApp.winfo_x() + (UI.TkApp.winfo_width() - pick_color.winfo_width()) // 2
+            y = UI.TkApp.winfo_y() + (UI.TkApp.winfo_height() - pick_color.winfo_height()) // 2
+
+            x = UI.TkApp.winfo_pointerx()-(pick_color.winfo_width()//2)
+            y = UI.TkApp.winfo_pointery()-pick_color.winfo_height()
+
+            pick_color.geometry(f"+{x}+{y}")
             color = pick_color.get() # get the color string
             if color != None:
                 UI.particle_hexcode_entry.cget("textvariable").set(color)
@@ -1000,7 +1008,7 @@ class UI():
         # ELEMENT PARAMETERS
         particle_size_label = customtkinter.CTkLabel(particle_frame, text="Particle Size",text_color=Styles.light_gray,font=Styles.InterFont)
         # preview_frame_slider = customtkinter.CTkSlider(preview_frame,from_=0, to=100,number_of_steps=10,variable=PygameData.frame,**Styles.disabled_slider_style,command=preview_frame_slider_debouncer.debouncer)
-        particle_size_slider = customtkinter.CTkSlider(particle_frame,from_=0, to=1,number_of_steps=10,variable= customtkinter.DoubleVar(value=1.0),**Styles.normal_slider_style,command=particle_size_slider_moved)
+        particle_size_slider = customtkinter.CTkSlider(particle_frame,from_=0, to=1,number_of_steps=10,variable= customtkinter.DoubleVar(value=0.5),**Styles.normal_slider_style,command=particle_size_slider_moved)
         particle_size_tooltip = CTkToolTip.CTkToolTip(particle_size_slider, message= str(ParticleData.size), delay= 0, x_offset= -20, y_offset= 20, font= Styles.InterFont)
 
         # particle_size_entry = customtkinter.CTkEntry(particle_frame, **Styles.normal_entry_style,textvariable=ParticleData.size,font=Styles.InterFont)
