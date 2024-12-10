@@ -1,10 +1,13 @@
 import math
 
 
-class sv():
+class AppConstants():
 
     DEBUG = True
     WIDTH, HEIGHT = 1280, 720
+    DEFAULT_CAMERA_POSITION = [1, 1, -5]
+    # DEFAULT_CAMERA_PITCH_YAW_ROLL = math.pi /12, -math.pi /4*3, 0
+    DEFAULT_CAMERA_PITCH_YAW_ROLL = 0, 0, 0
     MEMORY_PATH = './src/shared/Memory.json'
 
 
@@ -115,7 +118,7 @@ class ImageData():
     resampling = "Nearest"
 
 class ParticleData():
-    size = 1.0
+    size =0.5
     particle_type = "dust"
     type_scaling = {"dust": 20, "effect": 15}
     type_pos_variation = {"dust": 0.01, "effect": 0.02}

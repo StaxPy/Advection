@@ -1,8 +1,8 @@
-import pygame as pg
 from src.frontend.rendering.matrix_functions import *
 
+
 class Camera:
-    def __init__(self, render, position):
+    def __init__(self, render, position, pitch_yaw_roll):
         self.render = render
         self.position = np.array([*position, 1.0])
         self.forward = np.array([0, 0, 1, 1])
@@ -16,9 +16,7 @@ class Camera:
         self.zoom_speed = 0.05
         self.rotation_speed = 0.005
 
-        self.anglePitch = math.pi /12
-        self.angleYaw = -math.pi /4*3
-        self.angleRoll = 0
+        self.anglePitch, self.angleYaw, self.angleRoll = pitch_yaw_roll
 
         self.offset = 1
 

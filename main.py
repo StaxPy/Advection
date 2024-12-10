@@ -14,12 +14,11 @@ if __name__ == "__main__":
     import src.frontend.renderer as preview
 
     from src.shared.variables import *
-    PygameRenderer = preview.PygameRender(sv.WIDTH/2, sv.HEIGHT/5*4, interface.UI.preview_frame)
+    PygameRenderer = preview.PygameRender(AppConstants.WIDTH/2, AppConstants.HEIGHT/5*4, interface.UI.preview_frame)
     PygameData.PygameRenderer = PygameRenderer
 
-    # interface.UI.try_update_input('Testing_files/character_1.obj')
-    # interface.UI.try_update_input('Testing_files/textures/Dan-shaded-noeyes.png',True)
-    interface.UI.random_cloud()
+    interface.UI.try_update_input('src/assets/Advection_3d_logo.obj')
+    # interface.UI.random_cloud()
 
     
     

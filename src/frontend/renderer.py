@@ -45,7 +45,7 @@ class PygameRender:
 
 
     def create_object(self):
-        self.camera = Camera(self, [0, 1, -5]) # Initialize the camera
+        self.camera = Camera(self, AppConstants.DEFAULT_CAMERA_POSITION, AppConstants.DEFAULT_CAMERA_PITCH_YAW_ROLL) # Initialize the camera
         self.projection = Projection(self,self.aspect_ratio) # Instanciate the projection
 
         self.world_axes = Axes(self)
@@ -54,7 +54,7 @@ class PygameRender:
         # self.grid = Grid(self, 10, 1.0) #Unused
 
     def reset_camera(self):
-        self.camera = Camera(self, [0, 1, -5])
+        self.camera = Camera(self, AppConstants.DEFAULT_CAMERA_POSITION,AppConstants.DEFAULT_CAMERA_PITCH_YAW_ROLL)
         PygameTempData.update_requested += 1
 
     def draw_frame(self):

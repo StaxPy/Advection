@@ -204,11 +204,11 @@ def create_DataParticlesCloud_from_obj_file(obj_file_path, modifiers):
     if mtl_file_path and os_path.exists(mtl_file_path):
         materials = read_mtl_file(mtl_file_path)
         if materials:
-            print(f"Using materials from MTL file '{mtl_file_path}'.") if sv.DEBUG else None
+            print(f"Using materials from MTL file '{mtl_file_path}'.") if AppConstants.DEBUG else None
         else:
-            print(f"No material found in MTL file '{mtl_file_path}'. Using default color.") if sv.DEBUG else None
+            print(f"No material found in MTL file '{mtl_file_path}'. Using default color.") if AppConstants.DEBUG else None
     else:
-        print(f"No MTL file found or referenced in the OBJ file '{filename}'.") if sv.DEBUG else None
+        print(f"No MTL file found or referenced in the OBJ file '{filename}'.") if AppConstants.DEBUG else None
         
     if not vertices:
         print(f"No vertices found in the OBJ file '{filename}'.")
@@ -269,7 +269,7 @@ def create_DataParticlesCloud_from_image(image_path, reset_image_data=False,modi
     Returns:
         DataParticlesCloud: The created DataParticlesCloud object.
     """
-    if sv.DEBUG:
+    if AppConstants.DEBUG:
         print("Creating DataParticlesCloud from image...")
     # Open the image and convert it to RGBA
     img = Image.open(image_path).convert('RGBA')
@@ -370,7 +370,7 @@ def read_mtl_file(mtl_file_path):
         containing 'texture' (str or None), 'color' (tuple of floats or None),
         and 'transparency' (float or None) for each material.
     """
-    print("read MTL") if sv.DEBUG else None
+    print("read MTL") if AppConstants.DEBUG else None
 
     materials = {}
     current_material = None

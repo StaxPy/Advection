@@ -50,7 +50,7 @@ class UI():
 
 
         TkApp.minsize(720, 480)
-        TkApp.geometry(f"{sv.WIDTH}x{sv.HEIGHT}")
+        TkApp.geometry(f"{AppConstants.WIDTH}x{AppConstants.HEIGHT}")
         TkApp.configure(background=Styles.black)
         TkApp.title("Advection - Animation to particles")
         TkApp.iconbitmap("src/assets/icon.ico")
@@ -122,7 +122,7 @@ class UI():
 
             If it succeeds, it updates the interface and shared variables to the correct mode (model or image).
             """
-            if sv.DEBUG:
+            if AppConstants.DEBUG:
                 print("try_update_input")
 
             try:
@@ -179,7 +179,7 @@ class UI():
                 input_path: The path to the input file.
             """
             
-            if sv.DEBUG:
+            if AppConstants.DEBUG:
                 print("update_particles_cloud")
 
             if input_path == None: # If no path is given
@@ -286,7 +286,7 @@ class UI():
             - Disables the sequence checkbox if only one frame is found and adjusts the UI accordingly.
             - Enables the sequence checkbox if more than one frame is found and ensures it is checked.
             """
-            if sv.DEBUG: print("update_sequence_section")
+            if AppConstants.DEBUG: print("update_sequence_section")
             
             # Update the sequence section
             UI.sequence_start_Entry.cget("textvariable").set(str(InputData.first_frame))
@@ -779,7 +779,7 @@ class UI():
                 if new_value == 0:
                     raise ValueError("Trying to set a value to 0")
             except: # If the entry is invalid, reset to default
-                if sv.DEBUG: print("Invalid entry")
+                if AppConstants.DEBUG: print("Invalid entry")
                 new_value = round_float_to_int(round(default,4))
 
             finally: # Finally, update the variable to the result (rounded and eventually result of the operation)
@@ -858,7 +858,7 @@ class UI():
             UI.verify_image_entries(type= "size", dim= "height")
 
         def lock_image_size_ratio():
-            if sv.DEBUG == True:
+            if AppConstants.DEBUG == True:
                 print("Locking image size ratio")
             if ImageData.lock_size_ratio == True:
                 ImageData.lock_size_ratio = False
@@ -913,7 +913,7 @@ class UI():
         image_resampling_menu = customtkinter.CTkOptionMenu(image_frame, values=["Nearest","Bilinear","Bicubic"], height=25, command=update_image_resampling,**Styles.normal_menu_style)
 
         def lock_image_resolution_ratio():
-            if sv.DEBUG == True:
+            if AppConstants.DEBUG == True:
                 print("Locking image resolution ratio")
             if ImageData.lock_resolution_ratio == True:
                 ImageData.lock_resolution_ratio = False
