@@ -95,7 +95,7 @@ Finally, you can enable "ReColor" to force the color of every particle to a cust
 
 ## Ouptput
 
-When an input file and an output path are defined, you can export your file(s).
+When an input file and an output path are defined, you can export to mcfunction(s).
 
 If sequence mode is disabled, the exported .mcfunction will be named like the input file.
 
