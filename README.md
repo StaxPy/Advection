@@ -1,2 +1,5 @@
-# Animation_To_Particles-Converter
-Small app to convert 3D or 2D animations to Minecraft Particles commands.
+<img align="right" src="logo.png" alt="logo" width="76">
+
+
+# Advection - An animation to particles converter
+> An app to create Minecraft Java particle animations.
