@@ -129,6 +129,27 @@ $function mypack:my_sequence/$(frame)
 Note: Baking every call with a if statement for each frame into a single function is an option. Please create an issue if you think that would be better/useful to you.
 
 
+# Future plans
+
+Future improvements include:
+- playable animation in the preview
+- every Minecraft particle type support
+- particle animations in the preview (requires a complete rewrite of the preview renderer to use OpenGL)
+
+If you need any of these feature or have suggestions for others, please create a feature request/issue !
+
+# Final notes
+
+This is a passion project. I learned most of the python knowledge needed on it. Thus, there is necessarly bugs and optimisation issues I didn't handle quite right. I hope you can enjoy the tool anyways.
+# Credits
+
+This project was inspired by [Particle-Converter](https://github.com/kemo14331/Particle-Converter/blob/main/README_EN.md) and [obj to Minecraft Particles](https://www.planetminecraft.com/data-pack/obj-to-minecraft-particles/).
+
+The preview renderer was created with the help of tutorials by [Coder Space](https://youtu.be/M_Hx0g5vFko?si=uPhPYrmbSnbw9-CV).
+
+
+
+
 
 
 

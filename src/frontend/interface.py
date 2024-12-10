@@ -53,7 +53,7 @@ class UI():
         TkApp.geometry(f"{AppConstants.WIDTH}x{AppConstants.HEIGHT}")
         TkApp.configure(background=Styles.black)
         TkApp.title("Advection - Animation to particles")
-        TkApp.iconbitmap("src/assets/icon.ico")
+        TkApp.iconbitmap("./src/assets/icon.ico")
 
         config_frame_border = tk.Frame(TkApp,background=Styles.almost_black)
         config_frame = tk.Frame(config_frame_border,background=Styles.almost_black)
