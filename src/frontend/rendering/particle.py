@@ -1,5 +1,5 @@
 import pygame as pg
-import frontend.rendering.texture_data as td
+import src.frontend.rendering.texture_data as td
 
 
 

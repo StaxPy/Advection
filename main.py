@@ -10,10 +10,10 @@ if __name__ == "__main__":
     
 
     # (interface is initialized during import)
-    import frontend.interface as interface
-    import frontend.renderer as preview
+    import src.frontend.interface as interface
+    import src.frontend.renderer as preview
 
-    from shared.variables import *
+    from src.shared.variables import *
     PygameRenderer = preview.PygameRender(sv.WIDTH/2, sv.HEIGHT/5*4, interface.UI.preview_frame)
     PygameData.PygameRenderer = PygameRenderer
 

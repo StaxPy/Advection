@@ -1,9 +1,9 @@
-from frontend.rendering.object_3d import *
-from frontend.rendering.camera import *
-from frontend.rendering.projection import *
-from shared.variables import *
-from frontend.textured_particle import *
-import frontend.rendering.texture_data as td
+from src.frontend.rendering.object_3d import *
+from src.frontend.rendering.camera import *
+from src.frontend.rendering.projection import *
+import src.frontend.rendering.texture_data as td
+from src.shared.variables import *
+from src.frontend.textured_particle import *
 import pygame as pg
 from os import environ as os_environ
 
@@ -97,7 +97,6 @@ class PygameRender:
 
         
     def loop(self):
-        sv.pygame_width, sv.pygame_height = self.screen.get_size() 
 
         self.clock.tick()
         self.FPS = self.clock.get_fps()

@@ -1,6 +1,6 @@
 import pygame as pg
-from frontend.rendering.matrix_functions import *
-from shared.variables import *
+from src.frontend.rendering.matrix_functions import *
+from src.shared.variables import *
 from numba import njit
 
 @njit(fastmath=True)

@@ -1,4 +1,4 @@
-from frontend.rendering.matrix_functions import *
+from src.frontend.rendering.matrix_functions import *
 
 def center_to_origin(positions,modifiers):
     return positions @ translate(-modifiers.center)

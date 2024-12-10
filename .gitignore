@@ -1,20 +1,5 @@
-image.jpg
-Testing_Inputs
-Testing_files
-out
-~*
-Testing_files
-
-
-
-
-
-
-
-
-
-
-
+.vscode/
+.vscode
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

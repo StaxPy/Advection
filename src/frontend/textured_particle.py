@@ -1,7 +1,7 @@
 import pygame as pg
-from backend.modifiers import *
-from shared.variables import *
-import shared.color_operations as co
+from src.backend.modifiers import *
+from src.shared.variables import *
+import src.shared.color_operations as co
 from numba import njit
 import random
 

@@ -1,7 +1,7 @@
 import customtkinter as ctk
-from shared.variables import *
+from src.shared.variables import *
 import multiprocessing
-import backend.file_processor as fp
+import src.backend.file_processor as fp
 from os import path as os_path
 from os import startfile as os_startfile
 from os import name as os_name

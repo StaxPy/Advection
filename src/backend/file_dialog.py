@@ -1,31 +1,37 @@
 from os import listdir, path
-from shared.variables import *
+from src.shared.variables import *
 import json
 import re
 
 def update_json_memory(parameter,value):
     # Read the JSON file
-    with open(path.join(path.dirname(__file__), sv.MEMORY_PATH), 'r') as f:
+
+    with open( sv.MEMORY_PATH, 'r') as f:
         data = json.load(f)
 
     # Modify the desired value
     data[parameter] = value
 
     # Write the modified data back to the JSON file
-    with open(path.join(path.dirname(__file__), sv.MEMORY_PATH), "w") as f:
+    with open( sv.MEMORY_PATH, 'w') as f:
         json.dump(data, f)
 
 def get_json_memory(parameter):
     # Read the JSON file
-    with open(path.join(path.dirname(__file__), sv.MEMORY_PATH), 'r') as f:
+    if not path.exists( sv.MEMORY_PATH):
+        # create the file if it doesn't exist
+        with open( sv.MEMORY_PATH, 'w') as f:
+            json.dump({}, f)
+        return None
+    with open( sv.MEMORY_PATH, 'r') as f:
         data = json.load(f)
     return data.get(parameter)
 
 
 def find_file_sequence(input_path):
     InputData.seq_length = 0
-    InputData.first_frame = 1
-    InputData.last_frame = 1
+    InputData.first_frame = None
+    InputData.last_frame = None
     InputData.folder = path.dirname(input_path) # Get the parent directory of this file
     InputData.name = re.sub(r'\d+$', '', path.splitext(path.basename(input_path))[0]) # Get the name of the input file without the number at the end
     
@@ -37,8 +43,11 @@ def find_file_sequence(input_path):
             if match:
                 InputData.seq_length += 1
                 number_part = int(match.group(1))
+                if InputData.first_frame is None:
+                    InputData.first_frame = number_part
+                    InputData.last_frame = number_part
                 InputData.first_frame = min(InputData.first_frame, number_part)
                 InputData.last_frame = max(InputData.last_frame, number_part)
             InputData.sequence_files[number_part] = {"path": InputData.folder+"/"+file, "filename": path.splitext(file)[0]} # Store this frame's name and path the files dictionary
 
-    print("Found",InputData.seq_length,"frames")
+    print("Found",InputData.seq_length,"frames","from",InputData.first_frame,"to",InputData.last_frame)

@@ -3,12 +3,12 @@ import customtkinter
 import CTkColorPicker
 import CTkToolTip
 from os import path as os_path
-import backend.file_dialog as fd
-import backend.file_processor as fp
-import frontend.exporter_dialog as ed
-from shared.variables import *
+import src.backend.file_dialog as fd
+import src.backend.file_processor as fp
+import src.frontend.exporter_dialog as ed
+from src.shared.variables import *
+import src.shared.color_operations as co
 from PIL import Image
-import shared.color_operations as co
 import numexpr
 
 
@@ -430,13 +430,14 @@ class UI():
 
         """ 0 ICONS """
         def load_ctk_image(path,size):
-            return customtkinter.CTkImage(Image.open(os_path.join(os_path.dirname(__file__), path)),size=size)
+            # return customtkinter.CTkImage(Image.open(os_path.join(os_path.dirname(__file__), path)),size=size)
+            return customtkinter.CTkImage(Image.open(path),size=size)
 
-        file_button_image = load_ctk_image("../assets/file_lines_icon.png",size=(20,20))
-        link_open_button_image = load_ctk_image("../assets/link_open_icon.png",size=(20,20))
-        link_close_button_image = load_ctk_image("../assets/link_closed_icon.png",size=(20,20))
-        folder_button_image = load_ctk_image("../assets/folder_open_document_icon.png",size=(20,20))
-        export_button_image = load_ctk_image("../assets/hand_point_right_icon.png",size=(20,20))
+        file_button_image = load_ctk_image("src/assets/file_lines_icon.png",size=(20,20))
+        link_open_button_image = load_ctk_image("src/assets/link_open_icon.png",size=(20,20))
+        link_close_button_image = load_ctk_image("src/assets/link_closed_icon.png",size=(20,20))
+        folder_button_image = load_ctk_image("src/assets/folder_open_document_icon.png",size=(20,20))
+        export_button_image = load_ctk_image("src/assets/hand_point_right_icon.png",size=(20,20))
 
 
         """ 1 MAIN FRAMES """

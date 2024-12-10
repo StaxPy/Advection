@@ -1,11 +1,11 @@
-from backend.data_particle import *
-from shared.variables import *
-from backend.modifiers import *
+from src.backend.data_particle import *
+from src.shared.variables import *
+from src.backend.modifiers import *
 import random
 from os import path as os_path
 from os import makedirs as os_makedirs
 from PIL import Image
-from shared.color_operations import *
+from src.shared.color_operations import *
 
 
 

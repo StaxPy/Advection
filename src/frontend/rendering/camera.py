@@ -1,5 +1,5 @@
 import pygame as pg
-from frontend.rendering.matrix_functions import *
+from src.frontend.rendering.matrix_functions import *
 
 class Camera:
     def __init__(self, render, position):

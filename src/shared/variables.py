@@ -4,34 +4,9 @@ import math
 class sv():
 
     DEBUG = True
-    # CONSTANTS PARAMETERS
     WIDTH, HEIGHT = 1280, 720
-    MEMORY_PATH = '../shared/Memory.json'
-    PARTICLE_SIZE = 0.5
-    DEBUG_PARTICLE_COLOR = True
-    PARTICLE_TEXTURE_PATH = "assets/texture.png"
+    MEMORY_PATH = './src/shared/Memory.json'
 
-
-    # LOGIC RELATED VARIABLES
-    sequence_boolean = 0
-    model_resize_boolean = 0
-    image_resize_boolean = 0
-    particle_type = "dust"
-    autosize_boolean = 1
-
-    data_particles = []
-    textured_particles = []
-
-    output_path = ""
-
-
-    global_size = (0,0,0)
-
-    # PREVIEW RELATED VARIABLES
-    pygame_width, pygame_height = WIDTH/2, HEIGHT
-    preview_boolean = 1
-    loading_done = False
-    almost_black = "#181818"
 
 class Styles():
     hover_color = "#ffffff"
@@ -40,7 +15,7 @@ class Styles():
     medium_gray = "#6e6e6e"
     light_gray = "#adadad"
     white = "#ffffff"
-    almost_black = sv.almost_black
+    almost_black = "#181818"
     black = "#000000"
 
     InterFont = ""
