@@ -52,8 +52,8 @@ class UI():
         TkApp.minsize(720, 480)
         TkApp.geometry(f"{sv.WIDTH}x{sv.HEIGHT}")
         TkApp.configure(background=Styles.black)
-        TkApp.title("Animation-to-Particles Converter")
-        TkApp.iconbitmap("icon.ico")
+        TkApp.title("Advection - Animation to particles")
+        TkApp.iconbitmap("apps/frontend/assets/icon.ico")
 
         config_frame_border = tk.Frame(TkApp,background=Styles.almost_black)
         config_frame = tk.Frame(config_frame_border,background=Styles.almost_black)
