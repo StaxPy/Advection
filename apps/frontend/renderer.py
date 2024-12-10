@@ -4,9 +4,8 @@ from frontend.rendering.projection import *
 from shared.variables import *
 from frontend.textured_particle import *
 import frontend.rendering.texture_data as td
-import backend.file_processor as fp
 import pygame as pg
-import os
+from os import environ as os_environ
 
 class PygameRender:
     def __init__(self,WIDTH, HEIGHT, frame):
@@ -16,8 +15,8 @@ class PygameRender:
         self.aspect_ratio = self.WIDTH / self.HEIGHT
         self.FPS = 60
 
-        os.environ['SDL_WINDOWID'] = str(frame.winfo_id())
-        os.environ['SDL_VIDEODRIVER'] = 'windib'
+        os_environ['SDL_WINDOWID'] = str(frame.winfo_id())
+        os_environ['SDL_VIDEODRIVER'] = 'windib'
         pg.display.init()
         self.screen = pg.display.set_mode(self.RES, pg.RESIZABLE)
         self.clock = pg.time.Clock()
@@ -38,24 +37,7 @@ class PygameRender:
         self.panning_active = False
         self.pan_last_mouse_pos = None
 
-        
-        ''' TESTS'''
-
-        
-
-        # self.animation_cooldown = 50
-        # self.animation_frame = 0
-        # self.last_animation_update = pg.time.get_ticks()
-
-
-        # self.test_particle = particle.TexturedParticle(td.solo_textures['dust'], position=[0,0,0], color=(255,0,0), size=32)
-
-
-
-        # self.surface = pg.Surface((50,50)).convert_alpha()
-        # self.surface.fill(pg.Color('red'))
-        # self.surface.blit(self.image, (0, 0), special_flags=pg.BLEND_RGBA_MULT)
-        ''''''
+    
 
     def set_particles_texture(self, texture_name):
         PygameData.texture = td.solo_textures[f"{texture_name}"]

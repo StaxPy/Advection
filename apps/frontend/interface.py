@@ -2,13 +2,13 @@ import tkinter as tk
 import customtkinter
 import CTkColorPicker
 import CTkToolTip
-import os
+from os import path as os_path
 import backend.file_dialog as fd
 import backend.file_processor as fp
-import backend.exporter_dialog as ed
+import frontend.exporter_dialog as ed
 from shared.variables import *
 from PIL import Image
-import frontend.color_operations as co
+import shared.color_operations as co
 import numexpr
 
 
@@ -53,6 +53,7 @@ class UI():
         TkApp.geometry(f"{sv.WIDTH}x{sv.HEIGHT}")
         TkApp.configure(background=Styles.black)
         TkApp.title("Animation-to-Particles Converter")
+        TkApp.iconbitmap("icon.ico")
 
         config_frame_border = tk.Frame(TkApp,background=Styles.almost_black)
         config_frame = tk.Frame(config_frame_border,background=Styles.almost_black)
@@ -108,8 +109,8 @@ class UI():
             if dialog_result == "":
                 print("User exited file dialog without selecting a file")
                 return
-            fd.update_json_memory("input_path",os.path.dirname(dialog_result)) # Update the JSON file
-            if os.path.splitext(os.path.basename(dialog_result))[1] != "": # Check if the file has a name and extension
+            fd.update_json_memory("input_path",os_path.dirname(dialog_result)) # Update the JSON file
+            if os_path.splitext(os_path.basename(dialog_result))[1] != "": # Check if the file has a name and extension
                 UI.try_update_input(dialog_result, reset_image_size=True, use_sequence=False)
             else :
                 tk.messagebox.showerror("File name or extension is empty", "Please select another file.",icon="info")
@@ -130,7 +131,7 @@ class UI():
                 print(f"{e}, Updating canceled")
             else :
                 InputData.path = input_path # Update the global input path
-                InputData.extension = os.path.splitext(input_path)[1] # Update the global input extension
+                InputData.extension = os_path.splitext(input_path)[1] # Update the global input extension
 
                 # Update the global input mode
                 if InputData.extension == ".obj":
@@ -360,6 +361,7 @@ class UI():
             pick_color = CTkColorPicker.AskColor(initial_color=ParticleData.force_color,bg_color=Styles.dark_gray,fg_color=Styles.dark_gray,button_color=Styles.medium_gray,button_hover_color=Styles.hover_color,corner_radius=10) # open the color picker
             color = pick_color.get() # get the color string
             if color != None:
+                UI.particle_hexcode_entry.cget("textvariable").set(color)
                 UI.particle_color_button.configure(fg_color=color)
                 # UI.particle_hexcode_entry.cget("textvariable").set(color)
                 ParticleData.force_color = color
@@ -387,7 +389,6 @@ class UI():
         def export ():
             if InputData.path == None: # If no input is selected
                 UI.highlight_frame_loop(UI.input_frame) # Launch a highlight animation on the input frame
-                # tk.messagebox.showerror("Output folder required", "Please select an output folder",icon="info")
                 return
             
             if OutputData.path == None: # If no output is selected
@@ -398,12 +399,6 @@ class UI():
 
             # SINGLE EXPORT
             if SequenceData.toggle.get() == 0:
-                # try: # Try to get the output name from the current frame
-                #     output_name = os.path.splitext(os.path.basename(InputData.sequence_files[PygameData.frame.get()]["path"]))[0].lower()
-                # except: # If no frames where detected, default to the input file name
-                #     output_name = os.path.splitext(os.path.basename(InputData.path))[0].lower()
-                
-                # result = fp.write_mcfunction_file(ParticlesCache.DataParticlesCloud,OutputData.path,output_name,modifiers)
                 ed.Single_Exporter_Progress(UI.TkApp,UI.export_button,modifiers)
 
 
@@ -414,8 +409,7 @@ class UI():
 
                 # Launch the multiprocessor
                 ed.Sequence_Exporter_Progress(UI.TkApp,UI.export_button,modifiers)
-                # multiprocessor.grab_set()
-                # multiprocessor.transient(UI.TkApp)
+
 
         def bind_unbind_unfocus_widget(widgets:list[tk.Widget],bind:bool,callback=None):
             for widget in widgets:
@@ -436,7 +430,7 @@ class UI():
 
         """ 0 ICONS """
         def load_ctk_image(path,size):
-            return customtkinter.CTkImage(Image.open(os.path.join(os.path.dirname(__file__), path)),size=size)
+            return customtkinter.CTkImage(Image.open(os_path.join(os_path.dirname(__file__), path)),size=size)
 
         file_button_image = load_ctk_image("assets/file_lines_icon.png",size=(20,20))
         link_open_button_image = load_ctk_image("assets/link_open_icon.png",size=(20,20))
@@ -941,11 +935,23 @@ class UI():
         # sv.image_resize_boolean = tk.IntVar(value=sv.image_resize_boolean)
         # image_resize_checkbox = customtkinter.CTkCheckBox(image_frame,variable=sv.image_resize_boolean,command=None, text="Resize", onvalue=True, offvalue=False,**Styles.checkbox_style)
 
+        def slider_update_alpha_threshold(value):
+            print("slider_update_alpha_threshold", round(value))
+            InputData.alpha_threshold = round(value)
+            UI.update_particles_cloud(InputData.path)
+
+        def update_alpha_threshold_tooltip(value):
+            UI.alpha_threshold_tooltip.configure(message=round(value)) # Update the tooltip
+
+        alpha_threshold_label = customtkinter.CTkLabel(image_frame, text="Alpha threshold",text_color=Styles.light_gray,font=Styles.InterFont)
+        alpha_threshold_slider_debouncer = Debouncer(TkApp, 500, update_alpha_threshold_tooltip, slider_update_alpha_threshold)
+        alpha_threshold_slider = customtkinter.CTkSlider(image_frame,from_=0, to=254,number_of_steps=256,**Styles.normal_slider_style,command=alpha_threshold_slider_debouncer.debouncer)
+        alpha_threshold_tooltip = CTkToolTip.CTkToolTip(alpha_threshold_slider, message= str(InputData.alpha_threshold), delay= 0, x_offset= -20, y_offset= 20, font= Styles.InterFont)
 
 
         # GRID PARAMETERS
         image_frame.grid_columnconfigure([0,1,3,4], weight=1,uniform="a")
-        image_frame.grid_rowconfigure([0,1,2,3,4,5], weight=1,uniform="a")
+        image_frame.grid_rowconfigure([0,1,2,3,4,5,6], weight=1,uniform="a")
 
         # PLACEMENT PARAMETERS
         image_size_label.grid(column=0, row=1, padx=15, pady=0,sticky="e")
@@ -971,7 +977,7 @@ class UI():
         image_resolution_height_entry.bind("<FocusOut>", verify_image_resolution_Y)
         image_resolution_height_entry.bind("<Return>", verify_image_resolution_Y)
 
-        
+
         
         image_resolution_label.grid(column=0, row=4, padx=15, pady=0,sticky="e")
         image_resolution_width_entry.grid(column=1, row=4, padx=0, pady=0,sticky="")
@@ -982,6 +988,10 @@ class UI():
         image_resampling_menu.grid(column=1, columnspan=3, row=5, padx=0, pady=0,sticky="wen")
         # update_image_resolution_button.grid(column=4, row=4, padx=0, pady=0,sticky="nw")
         # image_resize_checkbox.grid(column=4, row=4, padx=0, pady=0,sticky="nw")
+        alpha_threshold_label.grid(column=0, row=6, padx=0, pady=0,sticky="e")
+        alpha_threshold_slider.grid(column=1, columnspan=3, row=6, padx=15, pady=0,sticky="we")
+
+
 
 
         
@@ -999,6 +1009,15 @@ class UI():
         def change_particle_type(value):
             PygameData.PygameRenderer.set_particles_texture(value)
             UI.update_particles_cloud(InputData.path)
+            if value == "effect" :
+                ParticleData.size = 1
+                UI.particle_size_slider.grid_forget()
+                UI.particle_size_label.grid_forget()
+            if value == "dust" :
+                UI.particle_size_slider.set(ParticleData.size)
+                UI.particle_size_label.grid(column=0, row=0, padx=0, pady=0)
+                UI.particle_size_slider.grid(column=1, row=0, padx=15, pady=0)
+
 
             
         
@@ -1016,27 +1035,19 @@ class UI():
 
         def toggle_force_color():
             ParticleData.force_color_toggle = not ParticleData.force_color_toggle
+            if ParticleData.force_color_toggle:
+                UI.particle_color_button.configure(fg_color=ParticleData.force_color)
+            else:
+                UI.particle_color_button.configure(fg_color=Styles.medium_gray)
             ParticlesCache.TexturedParticlesCloud.refresh_colors()
 
         particle_color_checkbox = customtkinter.CTkCheckBox(particle_frame,variable=tk.IntVar(value=False),command=toggle_force_color, text="ReColor", onvalue=True, offvalue=False,**Styles.checkbox_style)
         particle_hexcode_label = customtkinter.CTkLabel(particle_frame, text="Hexcode",text_color=Styles.light_gray,font=Styles.InterFont)
         
 
-        def slider_update_alpha_threshold(value):
-            print("slider_update_alpha_threshold", round(value))
-            InputData.alpha_threshold = round(value)
-            UI.update_particles_cloud(InputData.path)
-
-        def update_alpha_threshold_tooltip(value):
-            UI.alpha_threshold_tooltip.configure(message=round(value)) # Update the tooltip
-
-        alpha_threshold_label = customtkinter.CTkLabel(particle_frame, text="Alpha threshold",text_color=Styles.light_gray,font=Styles.InterFont)
-        alpha_threshold_slider_debouncer = Debouncer(TkApp, 500, update_alpha_threshold_tooltip, slider_update_alpha_threshold)
-        alpha_threshold_slider = customtkinter.CTkSlider(particle_frame,from_=0, to=254,number_of_steps=256,**Styles.normal_slider_style,command=alpha_threshold_slider_debouncer.debouncer)
-        alpha_threshold_tooltip = CTkToolTip.CTkToolTip(alpha_threshold_slider, message= str(InputData.alpha_threshold), delay= 0, x_offset= -20, y_offset= 20, font= Styles.InterFont)
 
 
-        # particle_hexcode_entry = customtkinter.CTkEntry(particle_frame, **Styles.disabled_entry_style,textvariable=ParticleData.force_color,font=Styles.InterFont)
+        particle_hexcode_entry = customtkinter.CTkEntry(particle_frame, **Styles.disabled_entry_style,textvariable=tk.StringVar(value=ParticleData.force_color),font=Styles.InterFont)
 
         particle_color_button = customtkinter.CTkButton(particle_frame, text=None,command = ask_color,fg_color=Styles.medium_gray,hover_color=Styles.hover_color,text_color=Styles.white,font=Styles.InterFont)
         
@@ -1065,10 +1076,8 @@ class UI():
 
         particle_color_checkbox.grid(column=3, row=2, padx=0, pady=0,sticky="w")
         particle_hexcode_label.grid(column=2, row=2, padx=0, pady=0)
-        # particle_hexcode_entry.grid(column=2, row=2, padx=0, pady=0)
-        alpha_threshold_label.grid(column=0, row=2, padx=0, pady=0,sticky="e")
-        alpha_threshold_slider.grid(column=1, row=2, padx=15, pady=0)
-        particle_color_button.grid(column=2, row=2, padx=15, pady=0,sticky="we")
+        particle_hexcode_entry.grid(column=2, row=2, padx=0, pady=0)
+        particle_color_button.grid(column=1, row=2, padx=15, pady=0,sticky="we")
 
 
 

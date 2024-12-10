@@ -1,4 +1,4 @@
-import os
+from os import path, makedirs, listdir
 import re
 from PIL import Image
 from PIL import ImageDraw
@@ -26,7 +26,7 @@ def read_mtl_file(mtl_file_path):
     current_material = None
     
     # Get the directory of the MTL file to handle relative paths
-    mtl_dir = os.path.dirname(mtl_file_path)
+    mtl_dir = path.dirname(mtl_file_path)
 
     with open(mtl_file_path, 'r') as mtl_file:
         for line in mtl_file:
@@ -37,7 +37,7 @@ def read_mtl_file(mtl_file_path):
             elif line.startswith('map_Kd ') and current_material is not None:
                 texture_path = ' '.join(line.split()[1:])
                 # Resolve relative texture paths
-                full_texture_path = os.path.join(mtl_dir, texture_path)
+                full_texture_path = path.join(mtl_dir, texture_path)
                 materials[current_material]['texture'] = full_texture_path  # Associate texture with the current material
             elif line.startswith('Kd ') and current_material is not None:
                 # Read the diffuse color
@@ -80,7 +80,7 @@ def read_obj_file(obj_file_path):
             elif line.startswith('mtllib '):
                 # If the OBJ references an MTL file
                 mtl_file_name = line.strip().split()[1]
-                mtl_file_path = os.path.join(os.path.dirname(obj_file_path), mtl_file_name)
+                mtl_file_path = path.join(path.dirname(obj_file_path), mtl_file_name)
             elif line.startswith('usemtl '):
                 # Update the current material to be used
                 current_material = line.strip().split()[1]
@@ -167,7 +167,7 @@ def create_ParticleData_list_from_obj_file(obj_file_path, normalize=False, targe
     materials = []  # List of materials used in faces
     mtl_file_path = None
     current_material = None
-    filename = os.path.basename(obj_file_path)
+    filename = path.basename(obj_file_path)
 
     with open(obj_file_path, 'r') as obj_file:
         for line in obj_file:
@@ -193,14 +193,14 @@ def create_ParticleData_list_from_obj_file(obj_file_path, normalize=False, targe
             elif line.startswith('mtllib '):
                 # If the OBJ references an MTL file
                 mtl_file_name = line.strip().split()[1]
-                mtl_file_path = os.path.join(os.path.dirname(obj_file_path), mtl_file_name)
+                mtl_file_path = path.join(path.dirname(obj_file_path), mtl_file_name)
             elif line.startswith('usemtl '):
                 # Update the current material to be used
                 current_material = line.strip().split()[1]
 
     # Find the textures from the MTL file if it exists
     textures = {}
-    if mtl_file_path and os.path.exists(mtl_file_path):
+    if mtl_file_path and path.exists(mtl_file_path):
         textures = read_mtl_file(mtl_file_path)  # Get all textures
         if textures:
             print(f"Using textures from MTL file '{mtl_file_path}'.")
@@ -315,16 +315,16 @@ def calculate_face_texture_center(texture_coords, face):
 
 def old_main(input_directory,output_directory):
     
-    os.makedirs(output_directory, exist_ok=True) # Create the output directory if it doesn't exist
+    makedirs(output_directory, exist_ok=True) # Create the output directory if it doesn't exist
 
-    for file in os.listdir(input_directory): # Loop through all files in the input directory
+    for file in listdir(input_directory): # Loop through all files in the input directory
         if file.endswith('.obj'):
             file_type = 'obj'
-            file_path = os.path.join(input_directory, file) # Get the full path to that OBJ file
-            match = re.search(r'(\d+)$', os.path.splitext(file)[0]) # Extract the number from the OBJ file name
+            file_path = path.join(input_directory, file) # Get the full path to that OBJ file
+            match = re.search(r'(\d+)$', path.splitext(file)[0]) # Extract the number from the OBJ file name
             if match:
                 number_part = str(int(match.group(1)))
-                mcfunction_file_path = os.path.join(output_directory, f"{number_part}.mcfunction")
+                mcfunction_file_path = path.join(output_directory, f"{number_part}.mcfunction")
             else:
                 print(f"No number found in the file name '{file}'. Skipping...")
                 continue
@@ -334,7 +334,7 @@ def old_main(input_directory,output_directory):
 
             # Find the textures from the MTL file if it exists
             textures = {}
-            if mtl_file_path and os.path.exists(mtl_file_path):
+            if mtl_file_path and path.exists(mtl_file_path):
                 textures = read_mtl_file(mtl_file_path)  # Get all textures
                 if textures:
                     print(f"Using textures from MTL file '{mtl_file_path}'.")
@@ -355,11 +355,11 @@ def old_main(input_directory,output_directory):
 
 def write_mc_function(sequence,frame,output_path,file_name,particle_data_list,particle_size=1,deltax=0,deltay=0,deltaz=0,speed=0, count=1,viewmode="force"):
     print("write_mc_function")
-    os.makedirs(output_path, exist_ok=True) # Create the output directory if it doesn't exist
+    makedirs(output_path, exist_ok=True) # Create the output directory if it doesn't exist
     if sequence:
         file_name = str(frame)
 
-    mcfunction_file_path = os.path.join(output_path, f"{file_name}.mcfunction")
+    mcfunction_file_path = path.join(output_path, f"{file_name}.mcfunction")
 
 
     """ OLD
@@ -368,7 +368,7 @@ def write_mc_function(sequence,frame,output_path,file_name,particle_data_list,pa
 
     # Find the textures from the MTL file if it exists
     textures = {}
-    if mtl_file_path and os.path.exists(mtl_file_path):
+    if mtl_file_path and path.exists(mtl_file_path):
         textures = read_mtl_file(mtl_file_path)  # Get all textures
         if textures:
             print(f"Using textures from MTL file '{mtl_file_path}'.")

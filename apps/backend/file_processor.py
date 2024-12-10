@@ -1,12 +1,11 @@
 from backend.data_particle import *
 from shared.variables import *
-# from frontend.rendering.matrix_functions import *
 from backend.modifiers import *
 import random
-import os
+from os import path as os_path
+from os import makedirs as os_makedirs
 from PIL import Image
-import time
-from frontend.color_operations import *
+from shared.color_operations import *
 
 
 
@@ -102,7 +101,7 @@ def create_DataParticlesCloud_from_obj_file(obj_file_path, modifiers):
     
     def parse_mtl_reference(line):
         # Returns the path to the MTL file
-        return os.path.join(os.path.dirname(obj_file_path), line.strip().split()[1])
+        return os_path.join(os_path.dirname(obj_file_path), line.strip().split()[1])
     
     def parse_material(line):
         # Returns the name of the material
@@ -166,7 +165,7 @@ def create_DataParticlesCloud_from_obj_file(obj_file_path, modifiers):
         
 
 
-    filename = os.path.basename(obj_file_path)
+    filename = os_path.basename(obj_file_path)
     lines = extract_obj_lines(obj_file_path)
     vertices = [] # List to store vertex data
     colored_vertices = [] # List to store vertex colors (rgb) paired with vertex id 
@@ -202,7 +201,7 @@ def create_DataParticlesCloud_from_obj_file(obj_file_path, modifiers):
             current_material_name = parse_material(line)
     
     # Load materials (textures, colors and transparencies)
-    if mtl_file_path and os.path.exists(mtl_file_path):
+    if mtl_file_path and os_path.exists(mtl_file_path):
         materials = read_mtl_file(mtl_file_path)
         if materials:
             print(f"Using materials from MTL file '{mtl_file_path}'.") if sv.DEBUG else None
@@ -377,7 +376,7 @@ def read_mtl_file(mtl_file_path):
     current_material = None
     
     # Get the directory of the MTL file to handle relative paths
-    mtl_dir = os.path.dirname(mtl_file_path)
+    mtl_dir = os_path.dirname(mtl_file_path)
 
     with open(mtl_file_path, 'r') as mtl_file:
         for line in mtl_file:
@@ -388,7 +387,7 @@ def read_mtl_file(mtl_file_path):
             elif line.startswith('map_Kd ') and current_material is not None:
                 texture_path = ' '.join(line.split()[1:])
                 # Resolve relative texture paths
-                full_texture_path = os.path.join(mtl_dir, texture_path)
+                full_texture_path = os_path.join(mtl_dir, texture_path)
                 materials[current_material]['texture'] = full_texture_path  # Associate texture with the current material
             elif line.startswith('Kd ') and current_material is not None:
                 # Read the diffuse color
@@ -459,8 +458,8 @@ def write_mcfunction_file(input, output_path, output_name,modifiers):
         print("write_mcfunction_file: input is not a valid file path or DataParticlesCloud object.")
         return
 
-    os.makedirs(output_path, exist_ok=True) # Create the output directory if it doesn't exist
-    mcfunction_file_path = os.path.join(output_path, f"{output_name}.mcfunction")
+    os_makedirs(output_path, exist_ok=True) # Create the output directory if it doesn't exist
+    mcfunction_file_path = os_path.join(output_path, f"{output_name}.mcfunction")
 
     deltax = 0
     deltay = 0
@@ -484,7 +483,7 @@ def write_mcfunction_file(input, output_path, output_name,modifiers):
             )
         elif particle_type == "effect":
             commands.append(
-                f"particle entity_effect{{color:[{r/255},{g/255},{b/255},{a/255}],scale:{modifiers.particle_size}}} "
+                f"particle entity_effect{{color:[{r/255},{g/255},{b/255},{a/255}]}} "
                 f"~{x:.5f} ~{y:.5f} ~{z:.5f} {deltax} {deltay} {deltaz} {speed} {count} {modifiers.viewmode} {modifiers.viewers}"
             )
 

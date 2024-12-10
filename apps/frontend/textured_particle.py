@@ -1,7 +1,7 @@
 import pygame as pg
 from backend.modifiers import *
 from shared.variables import *
-import frontend.color_operations as co
+import shared.color_operations as co
 from numba import njit
 import random
 
@@ -64,7 +64,7 @@ class TexturedParticlesCloud:
         self.particle_positions = DataParticlesCloud.particle_positions
         # Generate random position variations
         self.particle_position_variations = np.hstack((np.random.normal(scale=ParticleData.type_pos_variation[ParticleData.particle_type.get()], size=(len(DataParticlesCloud.particle_positions), 3)), np.zeros((len(DataParticlesCloud.particle_positions), 1))))
-        self.particles_scaling = ParticleData.type_scaling[ParticleData.particle_type.get()]
+        self.type_scaling = ParticleData.type_scaling[ParticleData.particle_type.get()]
         self.min_pos = DataParticlesCloud.min_pos
         self.max_pos = DataParticlesCloud.max_pos
         self.center = DataParticlesCloud.center
@@ -108,7 +108,7 @@ class TexturedParticlesCloud:
         if ParticlesCache.TexturedParticlesCloud.count < 10000:
             for index, particle in enumerate(sorted_particles):
                 if sorted_visibility[index]:
-                    scale = float(ParticleData.size) * self.particles_scaling / sorted_depths[index]
+                    scale = float(ParticleData.size) * self.type_scaling / sorted_depths[index]
                     if scale <= 0.1 :
                         scale = 0.1
                     scaled_particle = pg.transform.scale_by(particle.surface, scale)
