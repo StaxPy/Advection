@@ -1,13 +1,13 @@
 import pygame as pg
 
 solo_textures_data = {
-    'dust': {'file_path':'assets/particle_dust.png'},
-    'effect': {'file_path':'assets/particle_effect.png'},
+    'dust': {'file_path':'src/assets/particle_dust.png'},
+    'effect': {'file_path':'src/assets/particle_effect.png'},
 }
 
 atlas_textures_data = {
-    'dust': {'file_path':'assets/particle_dust_atlas.png'},
-    'effect': {'file_path':'assets/particle_effect_atlas.png'},
+    'dust': {'file_path':'src/assets/particle_dust_atlas.png'},
+    'effect': {'file_path':'src/assets/particle_effect_atlas.png'},
 }
 
 spritesheet_animations_data = {

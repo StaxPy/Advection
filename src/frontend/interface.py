@@ -53,7 +53,7 @@ class UI():
         TkApp.geometry(f"{sv.WIDTH}x{sv.HEIGHT}")
         TkApp.configure(background=Styles.black)
         TkApp.title("Advection - Animation to particles")
-        TkApp.iconbitmap("assets/icon.ico")
+        TkApp.iconbitmap("src/assets/icon.ico")
 
         config_frame_border = tk.Frame(TkApp,background=Styles.almost_black)
         config_frame = tk.Frame(config_frame_border,background=Styles.almost_black)
@@ -432,11 +432,11 @@ class UI():
         def load_ctk_image(path,size):
             return customtkinter.CTkImage(Image.open(os_path.join(os_path.dirname(__file__), path)),size=size)
 
-        file_button_image = load_ctk_image("assets/file_lines_icon.png",size=(20,20))
-        link_open_button_image = load_ctk_image("assets/link_open_icon.png",size=(20,20))
-        link_close_button_image = load_ctk_image("assets/link_closed_icon.png",size=(20,20))
-        folder_button_image = load_ctk_image("assets/folder_open_document_icon.png",size=(20,20))
-        export_button_image = load_ctk_image("assets/hand_point_right_icon.png",size=(20,20))
+        file_button_image = load_ctk_image("../assets/file_lines_icon.png",size=(20,20))
+        link_open_button_image = load_ctk_image("../assets/link_open_icon.png",size=(20,20))
+        link_close_button_image = load_ctk_image("../assets/link_closed_icon.png",size=(20,20))
+        folder_button_image = load_ctk_image("../assets/folder_open_document_icon.png",size=(20,20))
+        export_button_image = load_ctk_image("../assets/hand_point_right_icon.png",size=(20,20))
 
 
         """ 1 MAIN FRAMES """
