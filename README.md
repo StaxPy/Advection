@@ -85,7 +85,7 @@ If none of these are found, it will default to the color setting using each vert
 
 ## Particle settings
 
-At the moment, only of the Minecraft particle types are supported : **"dust"** and **"effect"** (newly entity effect). You can create an issue to let me know if you need other types.
+At the moment, only one of the Minecraft particle types are supported : **"dust"** and **"effect"** (newly entity effect). You can create an issue to let me know if you need other types.
 
 Using dust, you can change the particle size. (Unfortunatly, Minecraft doesnt have a size parameter for the "effect" particles)
 
