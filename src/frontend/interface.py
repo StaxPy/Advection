@@ -76,7 +76,7 @@ class UI():
         config_frame.grid(row = 0, column = 0,sticky="nsew",pady=10,padx=10)
         preview_frame.grid(row=0, column=1, sticky="nsew")
         export_frame_border.grid(row = 1, column = 1,sticky="nsew")
-        export_frame.grid(row = 0, column = 0,sticky="nsew",pady=15,padx=10)
+        export_frame.grid(row = 0, column = 0,sticky="nsew",pady=17,padx=20)
 
         highlight_progress = 0
 
@@ -594,6 +594,21 @@ class UI():
         model_depth_entry = customtkinter.CTkEntry(model_frame, **Styles.normal_entry_style,textvariable=ModelData.depth,font=Styles.InterFont,justify="center")
         model_wh_X_label = customtkinter.CTkLabel(model_frame, text="X",text_color=Styles.white,font=("Inter", 20))
         model_hd_X_label = customtkinter.CTkLabel(model_frame, text="X",text_color=Styles.white,font=("Inter", 20))
+        
+        def slider_update_alpha_threshold(value):
+            print("slider_update_alpha_threshold", round(value))
+            InputData.alpha_threshold = round(value)
+            UI.update_particles_cloud(InputData.path)
+
+        def update_alpha_threshold_tooltip(value):
+            UI.imgae_alpha_threshold_tooltip.configure(message=round(value)) # Update the tooltip
+
+        alpha_threshold_slider_debouncer = Debouncer(TkApp, 500, update_alpha_threshold_tooltip, slider_update_alpha_threshold)
+
+        model_alpha_threshold_label = customtkinter.CTkLabel(model_frame, text="Alpha threshold",text_color=Styles.light_gray,font=Styles.InterFont)
+        model_alpha_threshold_slider = customtkinter.CTkSlider(model_frame,from_=0, to=254,number_of_steps=256,**Styles.normal_slider_style,command=alpha_threshold_slider_debouncer.debouncer)
+        model_alpha_threshold_tooltip = CTkToolTip.CTkToolTip(model_alpha_threshold_slider, message= str(InputData.alpha_threshold), delay= 0, x_offset= -20, y_offset= 20, font= Styles.InterFont)
+
         # ModelData.resize_toggle = tk.IntVar(value=ModelData.resize_toggle)
         # model_resize_checkbox = customtkinter.CTkCheckBox(model_frame,variable=ModelData.resize_toggle,command=toggle_model_resize_section, text="Resize", onvalue=True, offvalue=False,**Styles.checkbox_style)
         def lock_model_size_ratio():
@@ -612,7 +627,7 @@ class UI():
 
         # GRID PARAMETERS
         model_frame.grid_columnconfigure([1,3,5], weight=1,uniform="a")
-        model_frame.grid_rowconfigure([0,1], weight=1,uniform="a")
+        model_frame.grid_rowconfigure([0,2], weight=1,uniform="a")
 
         # PLACEMENT PARAMETERS
 
@@ -628,6 +643,9 @@ class UI():
         # model_resize_checkbox.grid(column=6, row=1, padx=0, pady=0,sticky="nw")
         model_size_ratio_button_1.grid(column=2, row=1, padx=0, pady=0,sticky="nw")
         model_size_ratio_button_2.grid(column=4, row=1, padx=0, pady=0,sticky="nw")
+
+        model_alpha_threshold_label.grid(column=0, row=2, padx=15, pady=0,sticky="e")
+        model_alpha_threshold_slider.grid(column=1, columnspan=5, row=2, padx=15, pady=0,sticky="we")
         
         def verify_image_entries(type: str, dim: str):
             if type == "resolution":
@@ -944,18 +962,11 @@ class UI():
         # sv.image_resize_boolean = tk.IntVar(value=sv.image_resize_boolean)
         # image_resize_checkbox = customtkinter.CTkCheckBox(image_frame,variable=sv.image_resize_boolean,command=None, text="Resize", onvalue=True, offvalue=False,**Styles.checkbox_style)
 
-        def slider_update_alpha_threshold(value):
-            print("slider_update_alpha_threshold", round(value))
-            InputData.alpha_threshold = round(value)
-            UI.update_particles_cloud(InputData.path)
 
-        def update_alpha_threshold_tooltip(value):
-            UI.alpha_threshold_tooltip.configure(message=round(value)) # Update the tooltip
 
-        alpha_threshold_label = customtkinter.CTkLabel(image_frame, text="Alpha threshold",text_color=Styles.light_gray,font=Styles.InterFont)
-        alpha_threshold_slider_debouncer = Debouncer(TkApp, 500, update_alpha_threshold_tooltip, slider_update_alpha_threshold)
-        alpha_threshold_slider = customtkinter.CTkSlider(image_frame,from_=0, to=254,number_of_steps=256,**Styles.normal_slider_style,command=alpha_threshold_slider_debouncer.debouncer)
-        alpha_threshold_tooltip = CTkToolTip.CTkToolTip(alpha_threshold_slider, message= str(InputData.alpha_threshold), delay= 0, x_offset= -20, y_offset= 20, font= Styles.InterFont)
+        image_alpha_threshold_label = customtkinter.CTkLabel(image_frame, text="Alpha threshold",text_color=Styles.light_gray,font=Styles.InterFont)
+        image_alpha_threshold_slider = customtkinter.CTkSlider(image_frame,from_=0, to=254,number_of_steps=256,**Styles.normal_slider_style,command=alpha_threshold_slider_debouncer.debouncer)
+        imgae_alpha_threshold_tooltip = CTkToolTip.CTkToolTip(image_alpha_threshold_slider, message= str(InputData.alpha_threshold), delay= 0, x_offset= -20, y_offset= 20, font= Styles.InterFont)
 
 
         # GRID PARAMETERS
@@ -997,8 +1008,8 @@ class UI():
         image_resampling_menu.grid(column=1, columnspan=3, row=5, padx=0, pady=0,sticky="wen")
         # update_image_resolution_button.grid(column=4, row=4, padx=0, pady=0,sticky="nw")
         # image_resize_checkbox.grid(column=4, row=4, padx=0, pady=0,sticky="nw")
-        alpha_threshold_label.grid(column=0, row=6, padx=0, pady=0,sticky="e")
-        alpha_threshold_slider.grid(column=1, columnspan=3, row=6, padx=15, pady=0,sticky="we")
+        image_alpha_threshold_label.grid(column=0, row=6, padx=0, pady=0,sticky="e")
+        image_alpha_threshold_slider.grid(column=1, columnspan=3, row=6, padx=15, pady=0,sticky="we")
 
 
 
