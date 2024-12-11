@@ -3,7 +3,7 @@
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/StaxPy/Advection) [![GitHub license](https://img.shields.io/github/license/StaxPy/Advection)](https://github.com/StaxPy/Advection/blob/main/LICENSE)
 
 # Advection - An animation to particles converter
-> An app to create Minecraft Java particle animations.
+> An app to create Minecraft Java particle commands from images and 3D models.
 
 ![AppScreenshot](app_screenshot.png)
 
@@ -132,6 +132,7 @@ Note: Baking every call with a if statement for each frame into a single functio
 # Future plans
 
 Future improvements include:
+- extra exported function for easier use in-game
 - playable animation in the preview
 - every Minecraft particle type support
 - particle animations in the preview (requires a complete rewrite of the preview renderer to use OpenGL)
