@@ -104,9 +104,9 @@ If sequence mode is enabled, each frame of the sequence will be named by its num
 
 ## In-game usage
 
-When you exported, you get mcfunction files. These files should be used inside a [datapack](https://minecraft.wiki/w/Data_pack).
+When you export, you get mcfunction files. These files should be used inside a [datapack](https://minecraft.wiki/w/Data_pack).
 
-The usage of these functions inside your datapack is for you to decide. Although, playing an animation using function sequences is not the most straight-forward technique so here are some ideas :
+The usage of these functions inside your datapack is for you to decide. Although, playing an animation using a function sequence is not the most straight-forward technique so here are some ideas :
 
 Using a scoreboard, you can increment a number each time you want the next frame (every tick or less), and make sure to make it goes back to the beginning when reaching the end.
 
